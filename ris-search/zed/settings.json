@@ -1,0 +1,50 @@
+{
+  "language_servers": [
+    "!eslint",
+    "!typescript-language-server",
+    "tailwindcss-language-server",
+    "..."
+  ],
+  "languages": {
+    "Java": {
+      "format_on_save": "off"
+    },
+    "Vue.js": {
+      "formatter": {
+        "language_server": {
+          "name": "oxfmt"
+        }
+      },
+      "language_servers": ["!eslint", "vtsls", "..."]
+    }
+  },
+  "lsp": {
+    "jdtls": {
+      "settings": {
+        "initialization_options": {
+          "settings": {
+            "java": {
+              "configuration": {
+                "updateBuildConfiguration": "automatic"
+              },
+              "import": {
+                "gradle": {
+                  "enabled": true
+                }
+              }
+            }
+          },
+          "workspaceFolders": ["file:///Users/andreas/Projects/ris-search/backend"]
+        }
+      }
+    },
+    "tailwindcss-language-server": {
+      "settings": {
+        "classFunctions": ["tw"],
+        "experimental": {
+          "configFile": "./frontend/node_modules/@digitalservicebund/ris-ui/dist/style.css"
+        }
+      }
+    }
+  }
+}
