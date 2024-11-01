@@ -18,6 +18,14 @@ You can then run the scripts by either cloning the repository and running them l
 
 ## Usage
 
+### Bump all GUIDs
+
+```sh
+deno run --allow-read --allow-write bump-guids.ts <xml-file>
+```
+
+Reads the specified file and replaces all instances of `GUID="..."` with a new GUID. Will also replace the value if the GUID is empty or invalid. This can be used as a convenient way of making sure all GUIDs in an XML file are unique and valid.
+
 ### Character count ignoring whitespace
 
 ```sh
