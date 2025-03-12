@@ -8,15 +8,15 @@
 
 ## Installation
 
-You'll need [Deno](https://deno.com/):
+You'll need [Deno](https://deno.com/) and [just](https://just.systems):
 
 ```sh
-brew install deno
+brew install deno just
 ```
 
 You can then run the scripts by either cloning the repository and running them locally, or running them from the corresponding raw file URL from GitHub directly.
 
-## Usage
+## Scripts
 
 ### Bump all GUIDs
 
@@ -42,3 +42,14 @@ deno run --allow-read --allow-write gh-run-list-to-csv.ts out.txt
 ```
 
 Takes the output of a GitHub CLI run listing and converts it to a CSV for processing in a spreadsheet app.
+
+## Justfile
+
+The repository includes a `justfile`, containing many shortcuts and small scripts for tasks I often perform in the project. To get started, create a link to the file inside the ris-norms repository:
+
+```sh
+cd ris-norms
+ln -s path-to/ris-utils/justfile ./justfile
+```
+
+Then run `just --list` to see a list of all available takss.
