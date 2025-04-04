@@ -70,4 +70,4 @@ cd ris-norms
 ln -s path-to/ris-utils/justfile ./justfile
 ```
 
-Then run `just --list` to see a list of all available takss.
+Then run `just --list` to see a list of all available tasks.
