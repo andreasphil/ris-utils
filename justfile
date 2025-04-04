@@ -41,8 +41,8 @@ backend-build params='':
 
 # Run integration tests in watch mode
 [group: "backend", working-directory: "backend"]
-backend-test-integration-watch tests='"*"':
-  ./gradlew integrationTest --continuous --tests {{tests}}
+backend-test-integration-watch tests='"*"' params='':
+  ./gradlew integrationTest --continuous --tests {{tests}} {{params}}
 
 # Run integration tests once
 [group: "backend", working-directory: "backend"]
@@ -56,8 +56,8 @@ backend-test-watch tests='"*"' params='':
 
 # Run unit tests once
 [group: "backend", working-directory: "backend"]
-backend-test tests='"*"':
-  ./gradlew test --tests {{tests}}
+backend-test tests='"*"' params='':
+  ./gradlew test --tests {{tests}} {{params}}
 
 # Format backend code
 [group: "backend", working-directory: "backend"]
@@ -87,6 +87,14 @@ login username="jane.doe" password="test":
   http --session=ris-norms -A bearer -a $token localhost:8080/environment
   echo "Done."
 
+[group: "api"]
+create-announcement xmlpath force='true':
+  http --session=ris-norms -f POST localhost:8080/api/v1/verkuendungen file@"{{xmlpath}};type=text/xml" force={{force}}
+
+[group: "api", working-directory: "frontend"]
+create-samples:
+  node --run test:e2e -- --project=setup-chromium
+
 # Infra ---------------------------------------------------
 
 # Tear down and re-create Docker images
@@ -108,6 +116,18 @@ services-stop:
 
 # Remove the volume that contains the database data (services must be stopped first)
 [group: "infra"]
-wipe-db:
+wipe-db: services-stop
   docker volume rm ris-norms_postgres14-data
+
+# Util ----------------------------------------------------
+
+# List all error URIs
+[group: "util", working-directory: "backend/src/main"]
+list-error-uris:
+  rg --only-matching --no-filename --no-line-number --no-heading -e '"\/errors\/.+"' | sort | uniq
+
+# Refresh all GUIDs in the specified XML file
+[group: "util"]
+bump-guids xmlpath:
+  deno run -RW ~/Projects/ris-utils/bump-guids.ts {{xmlpath}}
 
