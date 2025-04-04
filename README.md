@@ -34,6 +34,24 @@ deno run --allow-env char-count-ignoring-whitespace.ts <search-string> <text>
 
 Finds all instances of `search-string` in `text` and prints the corresponding character range as it would be specified in the destination of an amending command in LDML.de. Whitespace in both the search string and the text is trimmed and consecutive spaces are replaced by a single space.
 
+### Get ticket ref for commit message
+
+```sh
+deno run --allow-read --allow-write --allow-env --allow-run ../ris-utils/get-commit-message-reference.ts <path-to-commit-message-file> <message-type>
+```
+
+**Intended to be used as the `prepare-commit-msg` hook.** Pre-fills the commit message with a ticket reference in case one is included in the current branch name (e.g. `risdev-1234-some-feature`). Otherwise `RISDEV-0000` is used as the default.
+
+Example usage with lefthook:
+
+```yaml
+# lefthook-local.yaml
+prepare-commit-msg:
+  commands:
+    insert-reference:
+      run: deno run -RWE --allow-run ../ris-utils/get-commit-message-reference.ts {0}
+```
+
 ### GitHub run list output to CSV
 
 ```sh
