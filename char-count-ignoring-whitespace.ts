@@ -1,5 +1,3 @@
-import kleur from "npm:kleur";
-
 function normalizeWhitespace(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }
@@ -23,25 +21,27 @@ function printRanges(ranges: [number, number][]): string {
   return ranges.map(([from, to]) => `${from}-${to}`).join(", ");
 }
 
-function printResult(value: string, ranges: [number, number][]): string {
+function printResult(value: string, ranges: [number, number][]): string[] {
   let result = "";
+  const format = [];
   let cursor = 0;
 
   // Assumes that ranges are sorted and don't overlap
   for (const [from, to] of ranges) {
     result += value.substring(cursor, from);
-    result += kleur.bgYellow(value.substring(from, to));
+    result += `%c${value.substring(from, to)}%c`;
+    format.push("background-color: yellow; color: black", "");
     cursor = to;
   }
 
   result += value.substring(cursor);
 
-  return result;
+  return [result, ...format];
 }
 
 let [searchStr, input] = Deno.args;
 if (!searchStr || !input) {
-  console.error(kleur.red("Search string and text can't be empty!"));
+  console.error("%cSearch string and text can't be empty!", "color: red");
   console.log("Usage: char-count-ignoring-whitespace.ts <search> <text>");
   Deno.exit(1);
 }
@@ -50,13 +50,23 @@ input = normalizeWhitespace(input);
 searchStr = normalizeWhitespace(searchStr);
 const ranges = findAll(searchStr, input);
 
-console.log(`${kleur.bold().cyan("Searching for:")} "${searchStr}"`);
-console.log(`${kleur.bold().cyan("In:")} "${input}"`);
+console.log(
+  `%cSearching for:%c "${searchStr}"`,
+  "color: cyan; font-weight: bold",
+  ""
+);
+
+console.log(`%cIn:%c "${input}"`, "color: cyan; font-weight: bold", "");
 
 if (ranges.length) {
-  console.log(`${kleur.bold().cyan("Found ranges:")} ${printRanges(ranges)}`);
+  console.log(
+    `%cFound ranges:%c ${printRanges(ranges)}`,
+    "color: cyan; font-weight: bold",
+    ""
+  );
+
   console.log("");
-  console.log(printResult(input, ranges));
+  console.log(...printResult(input, ranges));
 } else {
-  console.log(kleur.red("No matches found"));
+  console.log("%cNo matches found", "color: red");
 }
