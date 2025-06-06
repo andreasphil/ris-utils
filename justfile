@@ -1,6 +1,7 @@
 alias f := frontend
 alias ft := f-test
 alias b := backend
+alias bc := backend-clean
 alias bitw := b-integration-test-w
 alias btw := b-test-w
 alias bf := b-format
@@ -28,10 +29,18 @@ e2e:
 
 # Backend -------------------------------------------------
 
-# Run backend without automatic rebuilding
+# Run backend without automatic rebuilding, including E2E test seeds
 [group('backend'), working-directory('backend')]
 backend params='':
+  ./gradlew bootRun --args='--spring.profiles.active=local,e2e' {{params}}
+
+# Run backend without automatic rebuilding
+[group('backend'), working-directory('backend')]
+backend-no-seeds params='':
   ./gradlew clean bootRun {{params}}
+
+[group('backend')]
+backend-clean: wipe-db backend
 
 # Run backend with automatic rebuilding
 [group('backend'), working-directory('backend')]
@@ -102,7 +111,7 @@ login username="jane.doe" password="test":
 # Upload an XML
 [group('api')]
 create-announcement xmlpath force='true':
-  http --session=ris-norms -f POST localhost:8080/api/v1/verkuendungen file@"{{xmlpath}};type=text/xml" force={{force}}
+  http --session=ris-norms -f POST localhost:8080/api/v1/verkuendungen file@"{{xmlpath}};type=text/xml" force={{force}} Accept:application/json
 
 # Create sample data
 [group('api'), working-directory('frontend')]
@@ -132,6 +141,7 @@ services-stop:
 [group('infra')]
 wipe-db: services-stop
   docker volume rm ris-norms_postgres14-data
+  just services
 
 # Util ----------------------------------------------------
 
