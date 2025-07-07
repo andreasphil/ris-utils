@@ -115,8 +115,13 @@ create-announcement xmlpath force='true':
 
 # Create sample data
 [group('api'), working-directory('frontend')]
-create-samples:
-  node --run test:e2e -- --project=setup-chromium
+create-samples: login
+  just create-announcement frontend/e2e/testData/aenderungsgesetz-with-amended-norm-expressions.xml
+  just create-announcement frontend/e2e/testData/aenderungsgesetz-with-orphaned-amended-norm-expressions.xml
+  just create-announcement LegalDocML.de/1.7.2/samples/bgbl-1_1001_2_mods_01/aenderungsgesetz.xml
+  just create-announcement LegalDocMl.de/1.7.2/samples/bgbl-1_1002_2_mods-subsitution_01/aenderungsgesetz.xml
+  just create-announcement LegalDocMl.de/1.7.2/samples/bgbl-1_2017_s419/aenderungsgesetz.xml
+  just create-announcement LegalDocMl.de/1.7.2/samples/bgbl-1_2023_413/aenderungsgesetz.xml
 
 # Infra ---------------------------------------------------
 
