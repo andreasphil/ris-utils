@@ -32,7 +32,7 @@ e2e:
 # Run backend without automatic rebuilding, including E2E test seeds
 [group('backend'), working-directory('backend')]
 backend params='':
-  ./gradlew bootRun --args='--spring.profiles.active=local,e2e' {{params}}
+  ./gradlew clean bootRun --args='--spring.profiles.active=local,e2e' {{params}}
 
 # Run backend without automatic rebuilding
 [group('backend'), working-directory('backend')]
@@ -111,17 +111,27 @@ login username="jane.doe" password="test":
 # Upload an XML
 [group('api')]
 create-announcement xmlpath force='true':
-  http --session=ris-norms -f POST localhost:8080/api/v1/verkuendungen file@"{{xmlpath}};type=text/xml" force={{force}} Accept:application/json
+  #!/bin/zsh
+  set -ueEo pipefail
+  cd {{xmlpath}}
+  zip -r temp.zip *
+  http --session-read-only=ris-norms -f POST localhost:8080/api/v1/verkuendungen file@temp.zip force={{force}} Accept:application/json
+  rm temp.zip
 
 # Create sample data
 [group('api'), working-directory('frontend')]
 create-samples: login
-  just create-announcement frontend/e2e/testData/aenderungsgesetz-with-amended-norm-expressions.xml
-  just create-announcement frontend/e2e/testData/aenderungsgesetz-with-orphaned-amended-norm-expressions.xml
-  just create-announcement LegalDocML.de/1.7.2/samples/bgbl-1_1001_2_mods_01/aenderungsgesetz.xml
-  just create-announcement LegalDocMl.de/1.7.2/samples/bgbl-1_1002_2_mods-subsitution_01/aenderungsgesetz.xml
-  just create-announcement LegalDocMl.de/1.7.2/samples/bgbl-1_2017_s419/aenderungsgesetz.xml
-  just create-announcement LegalDocMl.de/1.7.2/samples/bgbl-1_2023_413/aenderungsgesetz.xml
+  just create-announcement frontend/e2e/testData/aenderungsgesetz-with-amended-norm-expressions
+  just create-announcement frontend/e2e/testData/aenderungsgesetz-with-orphaned-amended-norm-expressions
+  just create-announcement LegalDocML.de/1.8.1/samples/bgbl-1_1001_2_mods_01/aenderungsgesetz
+  just create-announcement LegalDocML.de/1.8.1/samples/bgbl-1_1002_2_mods-subsitution_01/aenderungsgesetz
+  just create-announcement LegalDocML.de/1.8.1/samples/bgbl-1_2017_s419/aenderungsgesetz
+  just create-announcement LegalDocML.de/1.8.1/samples/bgbl-1_2023_413/aenderungsgesetz
+
+# Make authenticated requests against the norms backend
+[group('api')]
+req params:
+  http --session-read-only=ris-norms {{params}}
 
 # Infra ---------------------------------------------------
 
@@ -160,3 +170,6 @@ list-error-uris:
 bump-guids xmlpath:
   deno run -RW ~/Projects/ris-utils/bump-guids.ts {{xmlpath}}
 
+[group('util'), working-directory('LegalDocML.de/1.8.1')]
+validate-xml xmlpath='LegalDocML.de/1.8.1/schema-extension-fixtures/SaatG_regelungstext/regelungstext-verkuendung-1.xml':
+  xmllint --noout --schema legalDocML.de-risnorms-regelungstextverkuendungsfassung.xsd "{{invocation_directory()}}/{{xmlpath}}"
