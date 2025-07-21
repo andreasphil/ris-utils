@@ -49,7 +49,7 @@ Example usage with lefthook:
 prepare-commit-msg:
   commands:
     insert-reference:
-      run: deno run -RWE --allow-run ../ris-utils/get-commit-message-reference.ts {0}
+      run: node --experimental-strip-types ../ris-utils/get-commit-message-reference.ts {0}
 ```
 
 ### GitHub run list output to CSV
@@ -60,6 +60,14 @@ deno run --allow-read --allow-write gh-run-list-to-csv.ts out.txt
 ```
 
 Takes the output of a GitHub CLI run listing and converts it to a CSV for processing in a spreadsheet app.
+
+### Which ELI
+
+```sh
+node which-eli.js <list of ELIs>
+```
+
+For all provided ELIs, checks what their type(s) are and prints the values of the individual components.
 
 ## Justfile
 
