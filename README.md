@@ -3,17 +3,26 @@
 </h1>
 
 <p align="center">
-  <strong>Scripts and utilities related to <a href="https://github.com/digitalservicebund/ris-norms/">ris-norms</a></strong>
+  <strong>Scripts and utilities related to <a href="https://github.com/topics/neuris">NeuRIS</a></strong>
 </p>
 
 ## Installation
 
 Clone the repository to get started.
 
-You'll need [Node](https://nodejs.org/) and [just](https://just.systems):
+You'll need [Node](https://nodejs.org/), [just](https://just.systems), and [Atlassian CLI](https://developer.atlassian.com/cloud/acli/)
 
 ```sh
-brew install node just
+brew tap atlassian/homebrew-acli
+brew install node just acli
+```
+
+Then clone the repository and install dependencies:
+
+```sh
+git clone git@github.com:andreasphil/ris-utils.git
+cd ris-utils
+npm i
 ```
 
 ## Scripts
@@ -60,6 +69,25 @@ node gh-run-list-to-csv.ts out.txt
 ```
 
 Takes the output of a GitHub CLI run listing and converts it to a CSV for processing in a spreadsheet app.
+
+### Switch branch from Jira
+
+```sh
+node switch-branch-from-jira.js [--watched]
+```
+
+Loads the work items currently assigned to your user from Jira and lists them. Select an item from the list to switch to the branch for that item. If the branch doesn't exist, you'll be prompted whether it should be created.
+
+If you provide the `--watched` flag, the list will include items you're watching in addition to your assigned items.
+
+Note that this requires to you be signed in to Jira through the Atlassian CLI.
+
+For convenience, you can add an alias to your global `.gitconfig` like this:
+
+```
+[alias]
+  switch-jira = !node path-to/ris-utils/switch-branch-from-jira.js
+```
 
 ### Which ELI
 
