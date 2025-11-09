@@ -1,3 +1,6 @@
+import { argv, exit } from "node:process";
+import { styleText } from "node:util";
+
 function normalizeWhitespace(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }
@@ -21,52 +24,42 @@ function printRanges(ranges: [number, number][]): string {
   return ranges.map(([from, to]) => `${from}-${to}`).join(", ");
 }
 
-function printResult(value: string, ranges: [number, number][]): string[] {
+function printResult(value: string, ranges: [number, number][]): string {
   let result = "";
-  const format = [];
   let cursor = 0;
 
   // Assumes that ranges are sorted and don't overlap
   for (const [from, to] of ranges) {
     result += value.substring(cursor, from);
-    result += `%c${value.substring(from, to)}%c`;
-    format.push("background-color: yellow; color: black", "");
+    result += styleText(["black", "bgYellow"], value.substring(from, to));
     cursor = to;
   }
 
   result += value.substring(cursor);
 
-  return [result, ...format];
+  return result;
 }
 
-let [searchStr, input] = Deno.args;
+let [searchStr, input] = argv.slice(2);
 if (!searchStr || !input) {
-  console.error("%cSearch string and text can't be empty!", "color: red");
+  console.error(styleText("red", "Search string and text can't be empty!"));
   console.log("Usage: char-count-ignoring-whitespace.ts <search> <text>");
-  Deno.exit(1);
+  exit(1);
 }
 
 input = normalizeWhitespace(input);
 searchStr = normalizeWhitespace(searchStr);
 const ranges = findAll(searchStr, input);
 
-console.log(
-  `%cSearching for:%c "${searchStr}"`,
-  "color: cyan; font-weight: bold",
-  ""
-);
+console.log(styleText(["cyan", "bold"], `Searching for: "${searchStr}"`));
 
-console.log(`%cIn:%c "${input}"`, "color: cyan; font-weight: bold", "");
+console.log(styleText(["cyan", "bold"], "In:") + ` "${input}"`);
 
 if (ranges.length) {
   console.log(
-    `%cFound ranges:%c ${printRanges(ranges)}`,
-    "color: cyan; font-weight: bold",
-    ""
+    styleText(["cyan", "bold"], "Found ranges:") + ` ${printRanges(ranges)}`,
   );
 
   console.log("");
-  console.log(...printResult(input, ranges));
-} else {
-  console.log("%cNo matches found", "color: red");
-}
+  console.log(printResult(input, ranges));
+} else console.log(styleText(["red"], "No matches found"));

@@ -1,4 +1,7 @@
-const [file] = Deno.args;
+import { readFileSync, writeFileSync } from "node:fs";
+import { argv } from "node:process";
+
+const [file] = argv.slice(2);
 
 function duration(val: string) {
   if (!val) {
@@ -24,7 +27,7 @@ function date(val: string) {
   return val?.substring(0, 10) ?? "";
 }
 
-const entries = Deno.readTextFileSync(file)
+const entries = readFileSync(file, "utf-8")
   .split("\n")
   .map((i) => i.split("\t"))
   .map((i) => ({
@@ -54,4 +57,4 @@ const entries = Deno.readTextFileSync(file)
 const csv =
   "branch,name,trigger,elapsed,timestamp,message,status,result\n" + entries;
 
-Deno.writeTextFileSync(file.replace(".txt", ".csv"), csv);
+writeFileSync(file.replace(".txt", ".csv"), csv, "utf-8");

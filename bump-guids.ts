@@ -1,5 +1,8 @@
-const [filePath] = Deno.args;
-let file = Deno.readTextFileSync(filePath);
+import { argv } from "node:process";
+import { readFileSync, writeFileSync } from "node:fs";
+
+const [filePath] = argv.slice(2)
+let file = readFileSync(filePath, "utf8");
 let count = 0;
 
 file = file.replace(/GUID="[a-f0-9-]*"/g, () => {
@@ -7,5 +10,5 @@ file = file.replace(/GUID="[a-f0-9-]*"/g, () => {
   return `GUID="${crypto.randomUUID()}"`;
 });
 
-Deno.writeTextFileSync(filePath, file);
+writeFileSync(filePath, file, { encoding: "utf8" });
 console.log(`✅ Updated ${count} GUIDs in ${filePath}`);
