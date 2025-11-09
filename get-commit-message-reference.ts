@@ -29,4 +29,4 @@ async function prepareMessage(outpath: string) {
 }
 
 const [outpath, type] = process.argv.slice(2);
-if (!type) prepareMessage(outpath);
+if (!type) await prepareMessage(outpath);
