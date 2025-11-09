@@ -75,7 +75,7 @@ The repository includes a `justfile`, containing many shortcuts and small script
 
 ```sh
 cd ris-norms
-ln -s path-to/ris-utils/justfile ./justfile
+ln -s path-to/ris-utils/norms/justfile ./justfile
 ```
 
 Then run `just --list` to see a list of all available tasks.

@@ -1,16 +1,12 @@
-alias f := frontend
-alias ft := f-test
 alias b := backend
-alias bc := backend-clean
-alias bitw := b-integration-test-w
-alias btw := b-test-w
-alias bf := b-format
-alias s := services
+alias bitw := backend-integration-test-watch
+alias bt := backend-test
+alias btw := backend-test-watch
+alias f := frontend
+alias ft := frontend-test
 
 default:
   just --list
-
-# Frontend ------------------------------------------------
 
 # Run frontend
 [group('frontend'), working-directory('frontend')]
@@ -19,15 +15,13 @@ frontend:
 
 # Run unit tests in watch mode
 [group('frontend'), working-directory('frontend')]
-f-test:
+frontend-test:
   node --run test:watch
 
 # Run E2E test UI
 [group('frontend'), working-directory('frontend')]
 e2e:
   node --run test:e2e -- --ui
-
-# Backend -------------------------------------------------
 
 # Run backend without automatic rebuilding, including E2E test seeds
 [group('backend'), working-directory('backend')]
@@ -39,52 +33,47 @@ backend params='':
 backend-no-seeds params='':
   ./gradlew clean bootRun {{params}}
 
-[group('backend')]
-backend-clean: wipe-db backend
-
 # Run backend with automatic rebuilding
 [group('backend'), working-directory('backend')]
-backend-w:
+backend-watch:
   tmux new-session -d -s backend-watch "just b-build-unchecked --continuous"
   tmux split-window -h -t backend-watch "./gradlew bootRun"
   tmux attach -t backend-watch
 
 # Run a build without performing additional checks
 [group('backend'), working-directory('backend')]
-b-build-unchecked params='':
+backend-build-unchecked params='':
   ./gradlew build -x test -x integrationTest -x checkstyleMain -x spotlessJavaCheck -x spotlessPropertiesCheck -x spotlessMiscCheck {{params}}
 
 # Run integration tests once
 [group('backend'), working-directory('backend')]
-b-integration-test tests='"*"' params='':
+backend-integration-test tests='"*"' params='':
   ./gradlew integrationTest --tests {{tests}} {{params}}
 
 # Run integration tests in watch mode
 [group('backend'), working-directory('backend')]
-b-integration-test-w tests='"*"' params='':
+backend-integration-test-watch tests='"*"' params='':
   ./gradlew integrationTest --continuous --tests {{tests}} {{params}}
 
 # Run unit tests once
 [group('backend'), working-directory('backend')]
-b-test tests='"*"' params='':
+backend-test tests='"*"' params='':
   ./gradlew test --tests {{tests}} {{params}}
 
 # Run unit tests in watch mode
 [group('backend'), working-directory('backend')]
-b-test-w tests='"*"' params='':
+backend-test-watch tests='"*"' params='':
   ./gradlew test --continuous --tests {{tests}} {{params}}
 
 # Serve the test reports
 [group('backend'), working-directory('backend/build/reports/tests')]
-b-test-report:
+backend-test-report:
   npx servor --reload
 
 # Format backend code
 [group('backend'), working-directory('backend')]
-b-format:
+backend-format:
   ./gradlew spotlessApply
-
-# API -----------------------------------------------------
 
 # Create a new session to use with httpie
 [group('api')]
@@ -128,13 +117,6 @@ create-samples: login
   just create-announcement LegalDocML.de/1.8.1/samples/bgbl-1_2017_s419/aenderungsgesetz
   just create-announcement LegalDocML.de/1.8.1/samples/bgbl-1_2023_413/aenderungsgesetz
 
-# Make authenticated requests against the norms backend
-[group('api')]
-req params:
-  http --session-read-only=ris-norms {{params}}
-
-# Infra ---------------------------------------------------
-
 # Tear down and re-create Docker images
 [group('infra')]
 rebuild-docker:
@@ -158,8 +140,6 @@ wipe-db: services-stop
   docker volume rm ris-norms_postgres14-data
   just services
 
-# Util ----------------------------------------------------
-
 # List all error URIs
 [group('util'), working-directory('backend/src/main')]
 list-error-uris:
@@ -168,8 +148,9 @@ list-error-uris:
 # Refresh all GUIDs in the specified XML file
 [group('util')]
 bump-guids xmlpath:
-  deno run -RW ~/Projects/ris-utils/bump-guids.ts {{xmlpath}}
+  node ~/Projects/ris-utils/bump-guids.ts {{xmlpath}}
 
 [group('util'), working-directory('LegalDocML.de/1.8.1')]
 validate-xml xmlpath='LegalDocML.de/1.8.1/schema-extension-fixtures/SaatG_regelungstext/regelungstext-verkuendung-1.xml':
   xmllint --noout --schema legalDocML.de-risnorms-regelungstextverkuendungsfassung.xsd "{{invocation_directory()}}/{{xmlpath}}"
+
