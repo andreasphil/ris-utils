@@ -8,8 +8,8 @@ default:
 
 # Run frontend
 [group('frontend'), working-directory('frontend')]
-frontend:
-  yarn dev
+frontend enable_private='true':
+  NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED={{enable_private}} yarn dev
 
 # Run unit tests in watch mode
 [group('frontend'), working-directory('frontend')]
@@ -23,8 +23,8 @@ frontend-test-standalone:
 
 # Run E2E test UI
 [group('frontend'), working-directory('frontend')]
-e2e:
-  yarn exec playwright test --ui
+e2e enable_private='true':
+  NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED={{enable_private}} yarn exec playwright test --ui
 
 [group('frontend'), working-directory('frontend')]
 typecheck:
