@@ -109,7 +109,12 @@ async function chooseFromWorkItems(options) {
  */
 function formatBranchName(workItem) {
   const key = workItem.key.toLowerCase();
-  const title = workItem.fields.summary.replace(/\W+/g, "-").toLowerCase();
+
+  const title = workItem.fields.summary
+    .replace(/\W+/g, "-")
+    .replace(/-$/, "")
+    .toLowerCase();
+
   return `${key}-${title}`;
 }
 
