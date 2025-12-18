@@ -10,6 +10,12 @@ The backend is a Java 21 + Spring Boot REST API. I work exclusively in the front
 
 For all changes you make, ensure type checking and tests still pass. If existing tests are starting to fail after making changes, ask before changing them.
 
+Test fixtures for E2E tests can be found in `backend/e2e-data`.
+
+## E2E tests
+
+E2E tests use Playwright and are located in `frontend/e2e/`. You can assume the backend, frontend, and test data to be available. Run tests with `cd frontend && yarn exec playwright test <options>`. Use `--project chromium` for speed (unless testing cross-browser issues), `--grep "test name"` to filter tests, and set `NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED=true` (default). Run minimal tests to save time, but if an entire view changed, run all related tests to catch regressions.
+
 ## Important commands
 
 ```
