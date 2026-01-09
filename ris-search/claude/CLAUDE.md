@@ -69,6 +69,21 @@ This repository contains coding patterns we no longer use:
 
 - **Naming conventions:** we have some legacy naming conventions for files, including `.data.ts`, `.logic.ts`, `.unit.spec.ts`. Don't use these anymore. When it comes to where stuff should be placed, follow standard Nuxt patterns. Unit tests should be placed next to the tested file and follow the naming pattern `<file>.spec.ts`. However when updating or looking for tests, you might sometimes need to check for files not following that exact pattern.
 
+## JSDoc Style
+
+- Put a blank line between the description and the first JSDoc tag
+- Keep in one line if the description is very short and has no tags (e.g. `/** Some thing */`)
+
+Example:
+
+```ts
+/**
+ * Some description ...
+ *
+ * @param a - The parameter
+ */
+ ```
+
 ## Code documentation guidelines
 
 ### Introduction

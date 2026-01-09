@@ -1,11 +1,5 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(cat:*)",
-      "Bash(grep:*)",
-      "Bash(find:*)",
-      "Bash(yarn test:*)",
-      "Bash(acli jira workitem:*)"
-    ]
+    "allow": ["Bash(cat:*)", "Bash(grep:*)", "Bash(find:*)"]
   }
 }
