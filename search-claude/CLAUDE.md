@@ -1,10 +1,21 @@
-# Copilot Instructions
+# Instructions
 
 This project is a mono-repo including both the backend and frontend for the NeuRIS Portal, an application for accessing laws, court decisions, and related literature from the federal government in Germany.
 
-The frontend is a Vue + Nuxt application inside `frontend/`. We use: Yarn 4 as our package manager and task runner, TypeScript as the programming language, Tailwind for styling, PrimeVue as our component library, Vitest + Testing Library for unit tests, Playwright for E2E testing.
+- `frontend/`:
+  - Vue + Nuxt application
+  - Package manager: Yarn 4
+  - Languages: TypeScript, Tailwind
+  - Component library: PrimeVue
+  - Unit tests: Vitest + `@testing-library/vue`
+  - E2E tests: Playwright
 
-The backend is a Java 21 + Spring Boot REST API. I work exclusively in the frontend for now, so you should never touch files in the `backend/` folder unless explicitly asked to do so. However you may refer to the backend project e.g. if you need details about types or the API interface. `backend/src/main/java/de/bund/digitalservice/ris/search/controller` would be a good place to start.
+- `backend`:
+  - Java 21 + Spring Boot REST API
+  - Package manager & build system: Gradle
+  - Controllers: `backend/src/main/java/de/bund/digitalservice/ris/search/controller`
+  - I work only in the frontend for now; don't touch backend files
+  - You may reference the backend project if needed for information about the API interface
 
 ## Good to know
 
@@ -12,26 +23,17 @@ For all changes you make, ensure type checking and tests still pass. If existing
 
 Test fixtures for E2E tests can be found in `backend/e2e-data`.
 
+You don't need to concern yourself about running the backend, services, or frontend dev server. Just assume these will be available.
+
 ## E2E tests
 
-E2E tests use Playwright and are located in `frontend/e2e/`. You can assume the backend, frontend, and test data to be available. Run tests with `cd frontend && yarn exec playwright test <options>`. Use `--project chromium` for speed (unless testing cross-browser issues), `--grep "test name"` to filter tests, and set `NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED=true` (default). Run minimal tests to save time, but if an entire view changed, run all related tests to catch regressions.
-
-## Important commands
-
-```
-yarn test # runs the unit tests with Vitest
-yarn typecheck # runs the typechecker
-```
-
-## Outdated coding patterns
-
-This repository contains coding patterns we no longer use. In particular:
-
-- **Unit tests:** Old unit tests use `@vue/test-utils`. All newly created unit test files should use `@testing-library/vue`. When editing an existing file, follow the method used in that file for consistency. Do not mix approaches in one file. Do not refactor a file to a different approach unless explicitly asekd to.
-
-- **Stores:** there are some Pinia-based stores. We don't use Pinia for new stores. When needed, use composables for extracting logic, including state, from components.
-
-- **Naming conventions:** we have some legacy naming conventions for files, including `.data.ts`, `.logic.ts`, `.unit.spec.ts`. Don't use these anymore. When it comes to where stuff should be placed, follow standard Nuxt patterns. Unit tests should be placed next to the tested file and follow the naming pattern `<file>.spec.ts`. However when updating or looking for tests, you might sometimes need to check for files not following that exact pattern.
+- Located in `frontend/e2e/`
+- Assume the backend, frontend dev server, test data, and additional services are available
+- Run tests with `cd frontend && yarn exec playwright test <options>`
+- Use `--project chromium` by default unless testing cross-browser issues
+- Use `--grep "test name"` to filter tests
+- Set `NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED=true` (default)
+- Run minimal tests to save time, but if an entire view changed, run all tests to catch regressions
 
 ## Unit tests
 
@@ -46,6 +48,26 @@ This repository contains coding patterns we no longer use. In particular:
   - All defined events are emitted as expected
   - ARIA attributes are set correctly
   - All defined models work as expected
+
+## Important commands
+
+```
+yarn test           # run the unit tests with Vitest
+yarn typecheck      # run the typechecker
+yarn eslint:check   # run linting
+yarn eslint:fix     # fix linting issues
+yarn prettier:check # check code formatting
+yarn prettier:fix   # fix code formatting
+yarn style:check    # run all style checks
+```
+
+## Outdated coding patterns
+
+This repository contains coding patterns we no longer use:
+
+- **Stores:** there are some Pinia-based stores. We don't use Pinia for new stores. When needed, use composables for extracting logic, including state, from components.
+
+- **Naming conventions:** we have some legacy naming conventions for files, including `.data.ts`, `.logic.ts`, `.unit.spec.ts`. Don't use these anymore. When it comes to where stuff should be placed, follow standard Nuxt patterns. Unit tests should be placed next to the tested file and follow the naming pattern `<file>.spec.ts`. However when updating or looking for tests, you might sometimes need to check for files not following that exact pattern.
 
 ## Code documentation guidelines
 
