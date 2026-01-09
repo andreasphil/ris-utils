@@ -8,9 +8,7 @@
 
 ## Installation
 
-Clone the repository to get started.
-
-You'll need [Node](https://nodejs.org/), [just](https://just.systems), and [Atlassian CLI](https://developer.atlassian.com/cloud/acli/)
+You'll need [Node](https://nodejs.org/), [just](https://just.systems), and [Atlassian CLI](https://developer.atlassian.com/cloud/acli/):
 
 ```sh
 brew tap atlassian/homebrew-acli
@@ -22,7 +20,7 @@ Then clone the repository and install dependencies:
 ```sh
 git clone git@github.com:andreasphil/ris-utils.git
 cd ris-utils
-npm i
+pnpm install
 ```
 
 ## Scripts
