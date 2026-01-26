@@ -6,29 +6,42 @@ alias fts := frontend-test-standalone
 default:
   just --list
 
+claude:
+  claude
+
 # Run frontend
 [group('frontend'), working-directory('frontend')]
 frontend enable_private='true':
-  NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED={{enable_private}} yarn dev
+  NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED={{enable_private}} pnpm dev
 
 # Run unit tests in watch mode
 [group('frontend'), working-directory('frontend')]
 frontend-test params='':
-  yarn test:watch {{params}}
+  pnpm test:watch {{params}}
 
 # Run unit tests in standalone mode
 [group('frontend'), working-directory('frontend')]
 frontend-test-standalone:
-  yarn test:watch --standalone
+  pnpm test:watch --standalone
 
 # Run E2E test UI
 [group('frontend'), working-directory('frontend')]
 e2e enable_private='true':
-  NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED={{enable_private}} yarn exec playwright test --ui
+  NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED={{enable_private}} pnpm exec playwright test --ui
 
 [group('frontend'), working-directory('frontend')]
 typecheck:
-  yarn typecheck
+  pnpm typecheck
+
+[group('frontend'), working-directory('frontend')]
+frontend-check:
+  pnpm style:check
+  pnpm typecheck
+
+[group('frontend'), working-directory('frontend')]
+frontend-fix:
+  pnpm style:fix
+  pnpm typecheck
 
 # Run backend without automatic rebuilding, including E2E test seeds
 [group('backend'), working-directory('backend')]
