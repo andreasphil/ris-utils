@@ -4,7 +4,7 @@ This project is a mono-repo including both the backend and frontend for the NeuR
 
 - `frontend/`:
   - Vue + Nuxt application
-  - Package manager: Yarn 4
+  - Package manager: PNPM
   - Languages: TypeScript, Tailwind
   - Component library: PrimeVue
   - Unit tests: Vitest + `@testing-library/vue`
@@ -29,7 +29,7 @@ You don't need to concern yourself about running the backend, services, or front
 
 - Located in `frontend/e2e/`
 - Assume the backend, frontend dev server, test data, and additional services are available
-- Run tests with `cd frontend && yarn exec playwright test <options>`
+- Run tests with `cd frontend && pnpm exec playwright test <options>`
 - Use `--project chromium` by default unless testing cross-browser issues
 - Use `--grep "test name"` to filter tests
 - Set `NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED=true` (default)
@@ -52,13 +52,13 @@ You don't need to concern yourself about running the backend, services, or front
 ## Important commands
 
 ```
-yarn test           # run the unit tests with Vitest
-yarn typecheck      # run the typechecker
-yarn eslint:check   # run linting
-yarn eslint:fix     # fix linting issues
-yarn prettier:check # check code formatting
-yarn prettier:fix   # fix code formatting
-yarn style:check    # run all style checks
+pnpm test           # run the unit tests with Vitest
+pnpm typecheck      # run the typechecker
+pnpm eslint:check   # run linting
+pnpm eslint:fix     # fix linting issues
+pnpm prettier:check # check code formatting
+pnpm prettier:fix   # fix code formatting
+pnpm style:check    # run all style checks
 ```
 
 ## Outdated coding patterns
