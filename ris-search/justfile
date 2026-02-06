@@ -48,6 +48,14 @@ frontend-fix:
 backend params='':
   ./gradlew clean bootRun --args='--spring.profiles.active=default,e2e' {{params}}
 
+[group('backend'), working-directory('backend')]
+backend-test:
+  DOCKER_HOST="unix://$(podman machine inspect --format '{{{{.ConnectionInfo.PodmanSocket.Path}}')" TESTCONTAINERS_RYUK_DISABLED=true ./gradlew test
+
+[group('backend'), working-directory('backend')]
+backend-integration-test:
+  DOCKER_HOST="unix://$(podman machine inspect --format '{{{{.ConnectionInfo.PodmanSocket.Path}}')" TESTCONTAINERS_RYUK_DISABLED=true ./gradlew integrationTest --exclude-task test
+
 # Boot services
 [group('infra')]
 services:
