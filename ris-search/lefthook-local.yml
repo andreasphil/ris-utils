@@ -13,5 +13,5 @@ pre-push:
         - ref: main
       root: frontend
       run: |
-        yarn style:check
-        yarn typecheck
+        pnpm style:check
+        pnpm typecheck
