@@ -6,18 +6,29 @@ import { promisify } from "node:util";
 
 const exec = promisify(execCb);
 
+/**
+ * @returns {Promise<string>}
+ */
 async function getBranchName() {
   const { stdout } = await exec("git branch --show-current");
   return stdout;
 }
 
-function getReference(source: string) {
+/**
+ * @param {string} source
+ * @returns {string}
+ */
+function getReference(source) {
   const match = source.match(/risdev-\d+/i);
   if (!match) return "RISDEV-0000";
   return match[0].toUpperCase();
 }
 
-async function prepareMessage(outpath: string) {
+/**
+ * @param {string} outpath
+ * @returns {Promise<void>}
+ */
+async function prepareMessage(outpath) {
   const outpathAbs = resolve(outpath);
 
   const branchName = await getBranchName();

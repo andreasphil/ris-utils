@@ -3,7 +3,11 @@ import { argv } from "node:process";
 
 const [file] = argv.slice(2);
 
-function duration(val: string) {
+/**
+ * @param {string} val
+ * @returns {string}
+ */
+function duration(val) {
   if (!val) {
     console.warn("[warn] cannot convert falsy value to duration");
     return "";
@@ -22,7 +26,11 @@ function duration(val: string) {
     .join(":");
 }
 
-function date(val: string) {
+/**
+ * @param {string} val
+ * @returns {string}
+ */
+function date(val) {
   if (!val) console.warn(`[warn] cannot convert falsy value to date`);
   return val?.substring(0, 10) ?? "";
 }

@@ -1,8 +1,5 @@
 {
   "type": "module",
-  "devDependencies": {
-    "@types/node": "^24.10.0"
-  },
   "dependencies": {
     "prompts": "^2.4.2",
     "yocto-spinner": "^1.0.0"

@@ -1,4 +1,4 @@
 prepare-commit-msg:
   commands:
     insert-reference:
-      run: node ~/Projects/ris-utils/get-commit-message-reference.ts {0}
+      run: node ~/Projects/ris-utils/get-commit-message-reference.js {0}

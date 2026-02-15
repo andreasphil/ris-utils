@@ -1,13 +1,23 @@
 import { argv, exit } from "node:process";
 import { styleText } from "node:util";
 
-function normalizeWhitespace(value: string): string {
+/**
+ * @param {string} value
+ * @returns {string}
+ */
+function normalizeWhitespace(value) {
   return value.trim().replace(/\s+/g, " ");
 }
 
-function findAll(substr: string, value: string): [number, number][] {
-  const result: [number, number][] = [];
-  let position: number = 0;
+/**
+ * @param {string} substr
+ * @param {string} value
+ * @returns {[number, number][]}
+ */
+function findAll(substr, value) {
+  /** @type {[number, number][]} */
+  const result = [];
+  let position = 0;
 
   while (position < value.length) {
     const index = value.indexOf(substr, position);
@@ -20,11 +30,20 @@ function findAll(substr: string, value: string): [number, number][] {
   return result;
 }
 
-function printRanges(ranges: [number, number][]): string {
+/**
+ * @param {[number, number][]} ranges
+ * @returns {string}
+ */
+function printRanges(ranges) {
   return ranges.map(([from, to]) => `${from}-${to}`).join(", ");
 }
 
-function printResult(value: string, ranges: [number, number][]): string {
+/**
+ * @param {string} value
+ * @param {[number, number][]} ranges
+ * @returns {string}
+ */
+function printResult(value, ranges) {
   let result = "";
   let cursor = 0;
 
@@ -43,7 +62,7 @@ function printResult(value: string, ranges: [number, number][]): string {
 let [searchStr, input] = argv.slice(2);
 if (!searchStr || !input) {
   console.error(styleText("red", "Search string and text can't be empty!"));
-  console.log("Usage: char-count-ignoring-whitespace.ts <search> <text>");
+  console.log("Usage: char-count-ignoring-whitespace.js <search> <text>");
   exit(1);
 }
 

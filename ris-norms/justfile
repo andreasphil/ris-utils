@@ -149,7 +149,7 @@ list-error-uris:
 # Refresh all GUIDs in the specified XML file
 [group('util')]
 bump-guids xmlpath:
-    node ~/Projects/ris-utils/bump-guids.ts {{ xmlpath }}
+    node ~/Projects/ris-utils/bump-guids.js {{ xmlpath }}
 
 # Validate XML files
 [group('util')]
