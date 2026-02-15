@@ -1,67 +1,75 @@
 alias b := backend
 alias f := frontend
 alias ft := frontend-test
-alias fts := frontend-test-standalone
+
+export TESTCONTAINERS_RYUK_DISABLED := "true"
+export DOCKER_HOST := "unix://" + `podman machine inspect | jq -r ".[0].ConnectionInfo.PodmanSocket.Path"`
+export NUXT_PUBLIC_RIS_BACKEND_URL := "http://localhost:8090"
+private := "true"
 
 default:
-  just --list
+    just --list
 
 claude:
-  claude
+    claude
+
+copilot:
+    copilot --add-dir /Users/andreas/Projects/ris-search
 
 # Run frontend
-[group('frontend'), working-directory('frontend')]
-frontend enable_private='true':
-  NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED={{enable_private}} pnpm dev
+[group('frontend')]
+[working-directory('frontend')]
+frontend:
+    NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED={{ private }} pnpm dev
 
 # Run unit tests in watch mode
-[group('frontend'), working-directory('frontend')]
+[group('frontend')]
+[working-directory('frontend')]
 frontend-test params='':
-  pnpm test:watch {{params}}
-
-# Run unit tests in standalone mode
-[group('frontend'), working-directory('frontend')]
-frontend-test-standalone:
-  pnpm test:watch --standalone
+    pnpm test:watch {{ params }}
 
 # Run E2E test UI
-[group('frontend'), working-directory('frontend')]
-e2e enable_private='true':
-  NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED={{enable_private}} pnpm exec playwright test --ui
+[group('frontend')]
+[working-directory('frontend')]
+e2e:
+    NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED={{ private }} pnpm exec playwright test --ui
 
-[group('frontend'), working-directory('frontend')]
-typecheck:
-  pnpm typecheck
-
-[group('frontend'), working-directory('frontend')]
-frontend-check:
-  pnpm style:check
-  pnpm typecheck
-
-[group('frontend'), working-directory('frontend')]
+# Validate frontend
+[group('frontend')]
+[working-directory('frontend')]
 frontend-fix:
-  pnpm style:fix
-  pnpm typecheck
+    pnpm style:fix
+    pnpm typecheck
 
-# Run backend without automatic rebuilding, including E2E test seeds
-[group('backend'), working-directory('backend')]
+# Run backend with E2E test seeds
+[group('backend')]
+[working-directory('backend')]
 backend params='':
-  ./gradlew clean bootRun --args='--spring.profiles.active=default,e2e' {{params}}
+    ./gradlew clean bootRun --args='--spring.profiles.active=default,e2e' {{ params }}
 
-[group('backend'), working-directory('backend')]
+# Connect to staging backend
+[group('backend')]
+staging-backend:
+    kubectl port-forward deployment/ris-portal-backend-local -n ris-staging 8090:8080
+
+# Run backend tests
+[group('backend')]
+[working-directory('backend')]
 backend-test:
-  DOCKER_HOST="unix://$(podman machine inspect --format '{{{{.ConnectionInfo.PodmanSocket.Path}}')" TESTCONTAINERS_RYUK_DISABLED=true ./gradlew test
+    ./gradlew test
 
-[group('backend'), working-directory('backend')]
+# Run backend integration tests
+[group('backend')]
+[working-directory('backend')]
 backend-integration-test:
-  DOCKER_HOST="unix://$(podman machine inspect --format '{{{{.ConnectionInfo.PodmanSocket.Path}}')" TESTCONTAINERS_RYUK_DISABLED=true ./gradlew integrationTest --exclude-task test
+    ./gradlew integrationTest --exclude-task test
 
 # Boot services
 [group('infra')]
 services:
-  docker compose up -d
+    docker compose up -d
 
 # Shut down services
 [group('infra')]
 services-stop:
-  docker compose down
+    docker compose down
