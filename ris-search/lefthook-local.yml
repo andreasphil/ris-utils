@@ -2,16 +2,3 @@ prepare-commit-msg:
   commands:
     insert-reference:
       run: node ~/Projects/ris-utils/get-commit-message-reference.ts {0}
-pre-commit:
-  skip: true
-commit-msg:
-  skip: true
-pre-push:
-  commands:
-    check-frontend:
-      only:
-        - ref: main
-      root: frontend
-      run: |
-        pnpm style:check
-        pnpm typecheck
