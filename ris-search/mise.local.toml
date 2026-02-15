@@ -1,0 +1,70 @@
+[tools]
+1password-cli = "latest"
+java = "21"
+lefthook = "latest"
+node = "24"
+pnpm = "10"
+trivy = "latest"
+
+[env]
+DOCKER_HOST = "unix://{{exec(command='podman machine inspect | jq -r \".[0].ConnectionInfo.PodmanSocket.Path\"')}}"
+NUXT_PUBLIC_RIS_BACKEND_URL = "http://localhost:8090"
+TESTCONTAINERS_RYUK_DISABLED = "true"
+
+[tasks.frontend]
+usage = """
+  flag "-p --private" negate="--no-private" default="true"
+"""
+dir = "frontend"
+run = "NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED=${usage_private} pnpm dev"
+
+[tasks."frontend:test"]
+dir = "frontend"
+run = "pnpm test:watch"
+
+[tasks."frontend:fix"]
+dir = "frontend"
+run = """
+  pnpm style:fix
+  pnpm typecheck
+"""
+
+[tasks.e2e]
+usage = """
+  flag "-p --private" negate="--no-private" default="true"
+"""
+dir = "frontend"
+run = "NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED=${usage_private} pnpm exec playwright test --ui"
+
+[tasks.backend]
+usage = """
+  flag "-s --staging" default="false"
+"""
+dir = "backend"
+run = """
+  if [[ ${usage_staging?} == "true" ]]; then
+    kubectl port-forward deployment/ris-portal-backend-local -n ris-staging 8090:8080
+  else
+    ./gradlew clean bootRun --args='--spring.profiles.active=default,e2e'
+  fi
+"""
+
+[tasks."backend:test"]
+dir = "backend"
+run = "./gradlew test"
+
+[tasks."backend:test:integration"]
+dir = "backend"
+run = "./gradlew integrationTest --exclude-task test"
+
+[tasks.services]
+run = "docker compose up -d"
+
+[tasks."services:stop"]
+run = "docker compose down"
+
+[tasks.claude]
+run = "claude"
+
+[tasks.copilot]
+run = "copilot --add-dir /Users/andreas/Projects/ris-search"
