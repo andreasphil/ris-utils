@@ -1,15 +1,12 @@
 [tools]
-1password-cli = "latest"
 java = "21"
 lefthook = "latest"
-node = "24"
-pnpm = "10"
 trivy = "latest"
 
 [env]
-DOCKER_HOST = "unix://{{exec(command='podman machine inspect | jq -r \".[0].ConnectionInfo.PodmanSocket.Path\"')}}"
+DOCKER_HOST="unix:///Users/andreas/.config/colima/default/docker.sock"
 NUXT_PUBLIC_RIS_BACKEND_URL = "http://localhost:8090"
-TESTCONTAINERS_RYUK_DISABLED = "true"
+PLAYWRIGHT_HTML_OPEN = "never"
 
 [tasks.frontend]
 usage = """
@@ -28,6 +25,11 @@ run = """
   pnpm style:fix
   pnpm typecheck
 """
+
+[tasks."frontend:api-types"]
+depends = ["backend:api-types"]
+dir = "frontend"
+run = "pnpm generate-api-types"
 
 [tasks.e2e]
 usage = """
@@ -57,14 +59,40 @@ run = "./gradlew test"
 dir = "backend"
 run = "./gradlew integrationTest --exclude-task test"
 
+[tasks."backend:api-types"]
+dir = "backend"
+run = "./gradlew integrationTest --tests 'de.bund.digitalservice.ris.search.integration.SwaggerIntegrationTest'"
+
 [tasks.services]
 run = "docker compose up -d"
 
 [tasks."services:stop"]
 run = "docker compose down"
 
-[tasks.claude]
-run = "claude"
+[tasks.http]
+usage = """
+  arg "<url>"
+  arg "[params]" var=#true
+"""
+run = "http -a \"basic-auth-staging:$(op read 'op://Team NeuRIS/Basic auth public portal staging/password')\" https://ris-portal.dev.ds4g.net/${usage_url} ${usage_params}"
 
-[tasks.copilot]
-run = "copilot --add-dir /Users/andreas/Projects/ris-search"
+[tasks.ticket]
+usage = """
+  flag "-w --web" default="false"
+"""
+run = """
+  branch=$(git branch --show-current)
+  ticket=$(echo "$branch" | grep -ioE '^risdev-[0-9]+' | tr '[:lower:]' '[:upper:]')
+  if [[ -z "$ticket" ]]; then
+    echo "No ticket ID found in branch name: $branch"
+    exit 1
+  fi
+  web_flag=""
+  if [[ ${usage_web?} == "true" ]]; then
+    web_flag="--web"
+  fi
+  acli jira workitem view "$ticket" $web_flag
+"""
+
+[tasks.opencode]
+run = "opencode"
