@@ -1,0 +1,167 @@
+[tools]
+java = "21"
+lefthook = "latest"
+
+[tasks.frontend]
+description = "Run frontend"
+alias = "f"
+dir = "frontend"
+run = "node --run dev"
+
+[tasks.frontend-test]
+description = "Run unit tests in watch mode"
+alias = "ft"
+dir = "frontend"
+run = "node --run test:watch"
+
+[tasks.e2e]
+description = "Run E2E test UI"
+dir = "frontend"
+run = "node --run test:e2e -- --ui"
+
+[tasks.backend]
+description = "Run backend without automatic rebuilding, including E2E test seeds"
+alias = "b"
+dir = "backend"
+run = "./gradlew clean bootRun --args='--spring.profiles.active=local,e2e' $@"
+
+[tasks.backend-no-seeds]
+description = "Run backend without automatic rebuilding"
+dir = "backend"
+run = "./gradlew clean bootRun $@"
+
+[tasks.backend-build-unchecked]
+description = "Run a build without performing additional checks"
+dir = "backend"
+run = "./gradlew build -x test -x integrationTest -x checkstyleMain -x spotlessJavaCheck -x spotlessPropertiesCheck -x spotlessMiscCheck $@"
+
+[tasks.backend-integration-test]
+description = "Run integration tests once [tests=*, ...]"
+dir = "backend"
+run = """
+  tests="${1:-*}"
+  shift 2>/dev/null || true
+  ./gradlew integrationTest --tests "$tests" "$@"
+"""
+
+[tasks.backend-integration-test-watch]
+description = "Run integration tests in watch mode [tests=*, ...]"
+alias = "bitw"
+dir = "backend"
+run = """
+  tests="${1:-*}"
+  shift 2>/dev/null || true
+  ./gradlew integrationTest --continuous --tests "$tests" "$@"
+"""
+
+[tasks.backend-test]
+description = "Run unit tests once [tests=*, ...]"
+alias = "bt"
+dir = "backend"
+run = """
+  tests="${1:-*}"
+  shift 2>/dev/null || true
+  ./gradlew test --tests "$tests" "$@"
+"""
+
+[tasks.backend-test-watch]
+description = "Run unit tests in watch mode [tests=*, ...]"
+alias = "btw"
+dir = "backend"
+run = """
+  tests="${1:-*}"
+  shift 2>/dev/null || true
+  ./gradlew test --continuous --tests "$tests" "$@"
+"""
+
+[tasks.backend-format]
+description = "Format backend code"
+dir = "backend"
+run = "./gradlew spotlessApply"
+
+[tasks.login]
+description = "Create a new session to use with httpie [username=jane.doe, password=test]"
+run = """
+  username="${1:-jane.doe}"
+  password="${2:-test}"
+  echo "Logging in ..."
+  token="$(http --form POST localhost:8443/realms/ris/protocol/openid-connect/token \
+      grant_type=password \
+      client_id=ris-norms-local \
+      client_secret=ris-norms-local \
+      username="$username" \
+      password="$password" | jq .access_token -r)"
+
+  if [ "$token" = "null" ]; then
+    echo "Failed to get a token."
+    exit 1
+  fi
+
+  echo "Done. Testing ..."
+  http --session=ris-norms -A bearer -a "$token" localhost:8080/environment
+  echo "Done."
+"""
+
+[tasks.create-announcement]
+description = "Upload an XML [xmlpath, force=true]"
+run = """
+  set -eo pipefail
+  xmlpath="${1:?xmlpath is required}"
+  force="${2:-true}"
+  cd "$xmlpath"
+  zip -r temp.zip *
+  http --session-read-only=ris-norms -f POST localhost:8080/api/v1/verkuendungen file@temp.zip force="$force" Accept:application/json
+  rm temp.zip
+"""
+
+[tasks.create-samples]
+description = "Create sample data"
+depends = ["login"]
+run = """
+  mise run create-announcement frontend/e2e/testData/aenderungsgesetz-with-amended-norm-expressions
+  mise run create-announcement frontend/e2e/testData/aenderungsgesetz-with-orphaned-amended-norm-expressions
+  mise run create-announcement LegalDocML.de/1.8.2/samples/bgbl-1_1001_2_mods_01/aenderungsgesetz
+  mise run create-announcement LegalDocML.de/1.8.2/samples/bgbl-1_1002_2_mods-subsitution_01/aenderungsgesetz
+  mise run create-announcement LegalDocML.de/1.8.2/samples/bgbl-1_2017_s419/aenderungsgesetz
+  mise run create-announcement LegalDocML.de/1.8.2/samples/bgbl-1_2023_413/aenderungsgesetz
+"""
+
+[tasks.rebuild-docker]
+description = "Tear down and re-create Docker images"
+run = """
+  docker compose down
+  docker image rm $(docker image ls --filter "reference=ris-norms-app" --format json | jq -r .ID)
+  docker compose up -d
+"""
+
+[tasks.services]
+description = "Start services"
+run = "docker compose -f docker-compose-services.yaml up -d"
+
+[tasks.services-stop]
+description = "Stop services"
+run = "docker compose -f docker-compose-services.yaml down"
+
+[tasks.wipe-db]
+description = "Remove the volume that contains the database data"
+depends = ["services-stop"]
+run = """
+  docker volume rm ris-norms_postgres14-data
+  mise run services
+"""
+
+[tasks.list-error-uris]
+description = "List all error URIs"
+dir = "backend/src/main"
+run = """
+  rg --only-matching --no-filename --no-line-number --no-heading -e '"/errors/.+"' | sort | uniq
+"""
+
+[tasks.bump-guids]
+description = "Refresh all GUIDs in the specified XML file [xmlpath]"
+run = "node ~/Projects/ris-utils/bump-guids.js $1"
+
+[tasks.validate-xml]
+description = "Validate XML files [xmlpath]"
+dir = "LegalDocML.de/1.8.2"
+run = """xmllint --noout --schema legalDocML.de-risnorms-regelungstextverkuendungsfassung.xsd "$MISE_ORIGINAL_CWD/${1:-LegalDocML.de/1.8.2/schema-extension-fixtures/SaatG_regelungstext/regelungstext-verkuendung-1.xml}" """
