@@ -8,11 +8,11 @@
 
 ## Installation
 
-You'll need [Node](https://nodejs.org/), [just](https://just.systems), and [Atlassian CLI](https://developer.atlassian.com/cloud/acli/):
+You'll need [Node](https://nodejs.org/), [mise](https://mise.jdx.dev), and [Atlassian CLI](https://developer.atlassian.com/cloud/acli/):
 
 ```sh
 brew tap atlassian/homebrew-acli
-brew install node just acli
+brew install node mise acli
 ```
 
 Then clone the repository and install dependencies:
@@ -95,14 +95,31 @@ node which-eli.js <list of ELIs>
 
 For all provided ELIs, checks what their type(s) are and prints the values of the individual components.
 
-## Justfile
+### HTML inline style report
 
-The repository includes a `justfile`, containing many shortcuts and small scripts for tasks I often perform in the project. To get started, create a link to the file inside the repository:
+Analyzes inline styles across HTML documents from the ris-search staging API and generates a report. Requires the [1Password CLI](https://developer.1password.com/docs/cli/) (`op`) to be signed in for fetching credentials.
+
+**Step 1:** Download HTML samples (default: 100 documents per type, max 300):
 
 ```sh
-# or: ris-search + search.justfile
-cd ris-norms
-ln -s path-to/ris-utils/norms.justfile ./justfile
+node ris-search/html-samples/download.mjs [--size <n>]
 ```
 
-Then run `just --list` to see a list of all available tasks.
+**Step 2:** Analyze the downloaded samples and generate the report:
+
+```sh
+node ris-search/html-samples/analyze.mjs
+```
+
+The report is written to `ris-search/html-samples/report.html`.
+
+## Mise tasks
+
+The repository includes a `mise.toml` for each project, containing shortcuts and small scripts for tasks I often perform. To get started, create a symlink to the file inside the project:
+
+```sh
+# ris-norms
+ln -s path-to/ris-utils/ris-norms/mise.toml path-to/ris-norms/mise.toml
+```
+
+Then run `mise tasks` to see a list of all available tasks.
