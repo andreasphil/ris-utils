@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(playwright-cli)",
+      "Bash(ctx7 library:*)",
+      "Bash(ctx7 docs:*)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  }
+}

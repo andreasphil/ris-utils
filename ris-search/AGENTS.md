@@ -10,7 +10,7 @@ This project is a mono-repo including both the backend and frontend for the NeuR
   - Unit tests: Vitest + `@testing-library/vue`
   - E2E tests: Playwright
 
-- `backend`:
+- `backend/`:
   - Java 21 + Spring Boot REST API
   - Package manager & build system: Gradle
   - Controllers: `backend/src/main/java/de/bund/digitalservice/ris/search/controller`
@@ -65,7 +65,7 @@ Use the `ctx7` CLI to fetch current documentation whenever the user asks about a
 
 Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.
 
-## Steps
+### Steps
 
 1. Resolve library: `ctx7 library <name> "<user's question>"`
 2. Pick the best match (ID format: `/org/project`) by: exact name match, description relevance, code snippet count, source reputation (High/Medium preferred), and benchmark score (higher is better). If results don't look right, try alternate names or queries (e.g., "next.js" not "nextjs", or rephrase the question)
