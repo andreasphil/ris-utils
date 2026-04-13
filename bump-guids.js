@@ -1,7 +1,7 @@
 import { argv } from "node:process";
 import { readFileSync, writeFileSync } from "node:fs";
 
-const [filePath] = argv.slice(2)
+const [filePath] = argv.slice(2);
 let file = readFileSync(filePath, "utf8");
 let count = 0;
 

@@ -21,12 +21,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const DOCUMENT_TYPES = [
-  "case-law",
-  "literature",
-  "administrative-directive",
-  "legislation",
-];
+const DOCUMENT_TYPES = ["case-law", "literature", "administrative-directive", "legislation"];
 
 const OUTPUT_FILE = join(__dirname, "report.html");
 
@@ -34,8 +29,7 @@ const OUTPUT_FILE = join(__dirname, "report.html");
 
 // Matches opening tags that carry a non-empty style attribute.
 // Captures: (1) element name, (2) style value
-const TAG_WITH_STYLE_RE =
-  /<([a-zA-Z][a-zA-Z0-9]*)(?:[^>]*?)\bstyle="([^"]+)"[^>]*>/g;
+const TAG_WITH_STYLE_RE = /<([a-zA-Z][a-zA-Z0-9]*)(?:[^>]*?)\bstyle="([^"]+)"[^>]*>/g;
 
 // Individual CSS declarations inside a style value: "property: value;"
 const DECLARATION_RE = /([a-zA-Z-]+)\s*:\s*([^;]+?)\s*(?:;|$)/g;
@@ -175,10 +169,7 @@ function renderTable(head, rows) {
 }
 
 function renderReport(allStats) {
-  const totalFiles = DOCUMENT_TYPES.reduce(
-    (s, t) => s + allStats[t].totalFiles,
-    0,
-  );
+  const totalFiles = DOCUMENT_TYPES.reduce((s, t) => s + allStats[t].totalFiles, 0);
 
   const allOccurrences = DOCUMENT_TYPES.flatMap((t) => allStats[t].occurrences);
   const globalByProperty = aggregate(allOccurrences);
@@ -197,9 +188,7 @@ function renderReport(allStats) {
     '<a href="#multi">Multi-property styles</a>',
     '<a href="#summary">Summary</a>',
     '<a href="#global">All types combined</a>',
-    ...DOCUMENT_TYPES.map(
-      (t) => `<a href="#type-${t}">${esc(t)}</a>`,
-    ),
+    ...DOCUMENT_TYPES.map((t) => `<a href="#type-${t}">${esc(t)}</a>`),
   ].join("\n");
 
   // ── Multi-property section ────────────────────────────────────────────────
@@ -246,42 +235,37 @@ function renderReport(allStats) {
   );
 
   // ── Global property sections ──────────────────────────────────────────────
-  const globalSections = sortedProperties.map(([property, byElement]) => {
-    const totalForProperty = [...byElement.values()].reduce(
-      (s, e) => s + e.total,
-      0,
-    );
+  const globalSections = sortedProperties
+    .map(([property, byElement]) => {
+      const totalForProperty = [...byElement.values()].reduce((s, e) => s + e.total, 0);
 
-    const perType = DOCUMENT_TYPES.flatMap((docType) => {
-      const n = allStats[docType].occurrences.filter(
-        (o) => o.property === property,
-      ).length;
-      return n > 0 ? [`${esc(docType)}: ${fmt(n)}`] : [];
-    }).join(" &nbsp;·&nbsp; ");
+      const perType = DOCUMENT_TYPES.flatMap((docType) => {
+        const n = allStats[docType].occurrences.filter((o) => o.property === property).length;
+        return n > 0 ? [`${esc(docType)}: ${fmt(n)}`] : [];
+      }).join(" &nbsp;·&nbsp; ");
 
-    const sortedElements = [...byElement.entries()].sort(
-      (a, b) => b[1].total - a[1].total,
-    );
+      const sortedElements = [...byElement.entries()].sort((a, b) => b[1].total - a[1].total);
 
-    const table = renderTable(
-      ["Element", "Occurrences", "Distinct values", "Top values"],
-      sortedElements.map(([element, { values, total }]) => {
-        const topValues = [...values.entries()]
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 3)
-          .map(([v]) => code(v))
-          .join(", ");
-        return [code(element), fmt(total), fmt(values.size), topValues];
-      }),
-    );
+      const table = renderTable(
+        ["Element", "Occurrences", "Distinct values", "Top values"],
+        sortedElements.map(([element, { values, total }]) => {
+          const topValues = [...values.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([v]) => code(v))
+            .join(", ");
+          return [code(element), fmt(total), fmt(values.size), topValues];
+        }),
+      );
 
-    return `
+      return `
 <article>
   <h3>${code(property)}</h3>
   <p><strong>Total occurrences:</strong> ${fmt(totalForProperty)} &nbsp;·&nbsp; <strong>By type:</strong> ${perType}</p>
   ${table}
 </article>`;
-  }).join("\n");
+    })
+    .join("\n");
 
   // ── Per-type detail sections ──────────────────────────────────────────────
   const typeSections = DOCUMENT_TYPES.map((docType) => {
@@ -307,26 +291,27 @@ function renderReport(allStats) {
       sorted.map(([property, byElement]) => {
         const total = [...byElement.values()].reduce((s, e) => s + e.total, 0);
         const elements = [...byElement.keys()].map(code).join(", ");
-        const distinctValues = new Set(
-          [...byElement.values()].flatMap((e) => [...e.values.keys()]),
-        ).size;
+        const distinctValues = new Set([...byElement.values()].flatMap((e) => [...e.values.keys()]))
+          .size;
         return [code(property), elements, fmt(total), fmt(distinctValues)];
       }),
     );
 
-    const valueDetails = sorted.map(([property, byElement]) => {
-      const rows = [...byElement.entries()]
-        .sort((a, b) => b[1].total - a[1].total)
-        .map(([element, { values }]) => {
-          const valueList = [...values.entries()]
-            .sort((a, b) => b[1] - a[1])
-            .map(([v, count]) => `<li>${code(v)} <span class="count">${fmt(count)}×</span></li>`)
-            .join("");
-          return `<dt>on ${code(element)}</dt><dd><ul>${valueList}</ul></dd>`;
-        })
-        .join("");
-      return `<div class="value-group"><h4>${code(property)}</h4><dl>${rows}</dl></div>`;
-    }).join("\n");
+    const valueDetails = sorted
+      .map(([property, byElement]) => {
+        const rows = [...byElement.entries()]
+          .sort((a, b) => b[1].total - a[1].total)
+          .map(([element, { values }]) => {
+            const valueList = [...values.entries()]
+              .sort((a, b) => b[1] - a[1])
+              .map(([v, count]) => `<li>${code(v)} <span class="count">${fmt(count)}×</span></li>`)
+              .join("");
+            return `<dt>on ${code(element)}</dt><dd><ul>${valueList}</ul></dd>`;
+          })
+          .join("");
+        return `<div class="value-group"><h4>${code(property)}</h4><dl>${rows}</dl></div>`;
+      })
+      .join("\n");
 
     return `
 <section id="type-${docType}">
@@ -504,10 +489,9 @@ async function main() {
     process.stdout.write(`  ${docType}...`);
     allStats[docType] = await collectForType(docType);
     const { occurrences, filesWithStyles, multiPropertyStyles } = allStats[docType];
-    const multiNote = multiPropertyStyles.length > 0 ? `, ${multiPropertyStyles.length} multi-property` : "";
-    console.log(
-      ` ${occurrences.length} occurrences in ${filesWithStyles} files${multiNote}`,
-    );
+    const multiNote =
+      multiPropertyStyles.length > 0 ? `, ${multiPropertyStyles.length} multi-property` : "";
+    console.log(` ${occurrences.length} occurrences in ${filesWithStyles} files${multiNote}`);
   }
 
   console.log("Generating report...");

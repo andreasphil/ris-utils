@@ -89,9 +89,7 @@ async function chooseFromWorkItems(options) {
     suggest: async (input, choices) => {
       if (!input) return choices;
       input = input.toLowerCase();
-      return choices.filter((choice) =>
-        choice.title.toLowerCase().includes(input),
-      );
+      return choices.filter((choice) => choice.title.toLowerCase().includes(input));
     },
 
     choices: options.map((i) => ({
@@ -110,10 +108,7 @@ async function chooseFromWorkItems(options) {
 function formatBranchName(workItem) {
   const key = workItem.key.toLowerCase();
 
-  const title = workItem.fields.summary
-    .replace(/\W+/g, "-")
-    .replace(/-$/, "")
-    .toLowerCase();
+  const title = workItem.fields.summary.replace(/\W+/g, "-").replace(/-$/, "").toLowerCase();
 
   return `${key}-${title}`;
 }

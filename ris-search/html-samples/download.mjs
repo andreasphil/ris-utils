@@ -51,9 +51,7 @@ function getBasicAuthHeader() {
     "op read 'op://Team NeuRIS/Basic auth public portal staging/password'",
     { encoding: "utf8" },
   ).trim();
-  return (
-    "Basic " + Buffer.from(`basic-auth-staging:${password}`).toString("base64")
-  );
+  return "Basic " + Buffer.from(`basic-auth-staging:${password}`).toString("base64");
 }
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
@@ -107,10 +105,7 @@ async function fetchSearchResults(endpoint, total, authHeader) {
   while (items.length < total) {
     const remaining = total - items.length;
     const pageSize = Math.min(remaining, PAGE_SIZE);
-    const data = await apiGet(
-      `${endpoint}?size=${pageSize}&pageIndex=${pageIndex}`,
-      authHeader,
-    );
+    const data = await apiGet(`${endpoint}?size=${pageSize}&pageIndex=${pageIndex}`, authHeader);
     const members = data?.member ?? [];
     const page = members.map((m) => m.item ?? m).filter(Boolean);
     items.push(...page);
@@ -137,19 +132,13 @@ async function downloadSimpleType(type, authHeader) {
 
   console.log(`[${type}] Got ${documentNumbers.length} document numbers. Downloading HTML...`);
 
-  const results = await runInBatches(
-    documentNumbers,
-    CONCURRENCY,
-    async (docNum) => {
-      const html = await fetchHtml(`/v1/${type}/${docNum}.html`, authHeader);
-      await writeFile(join(outDir, `${docNum}.html`), html, "utf8");
-    },
-  );
+  const results = await runInBatches(documentNumbers, CONCURRENCY, async (docNum) => {
+    const html = await fetchHtml(`/v1/${type}/${docNum}.html`, authHeader);
+    await writeFile(join(outDir, `${docNum}.html`), html, "utf8");
+  });
 
   const failed = results.filter((r) => r.status === "rejected");
-  console.log(
-    `[${type}] Done. ${results.length - failed.length} saved, ${failed.length} failed.`,
-  );
+  console.log(`[${type}] Done. ${results.length - failed.length} saved, ${failed.length} failed.`);
   failed.forEach((r) => console.error(`  ✗ ${r.reason?.message ?? r.reason}`));
 }
 
@@ -178,10 +167,8 @@ async function downloadLegislation(authHeader) {
   );
 
   // Step 2: fetch each expression's metadata to find the HTML contentUrl
-  const metadataResults = await runInBatches(
-    expressionPaths,
-    CONCURRENCY,
-    (path) => apiGet(path, authHeader),
+  const metadataResults = await runInBatches(expressionPaths, CONCURRENCY, (path) =>
+    apiGet(path, authHeader),
   );
 
   const htmlUrls = [];
@@ -204,25 +191,18 @@ async function downloadLegislation(authHeader) {
     htmlUrls.push(htmlEncoding.contentUrl);
   }
 
-  console.log(
-    `[${type}] Got ${htmlUrls.length} HTML URLs. Downloading HTML...`,
-  );
+  console.log(`[${type}] Got ${htmlUrls.length} HTML URLs. Downloading HTML...`);
 
   // Step 3: fetch each HTML file
   const results = await runInBatches(htmlUrls, CONCURRENCY, async (htmlPath) => {
     const html = await fetchHtml(htmlPath, authHeader);
     // Sanitize the path into a filename: strip leading /v1/legislation/eli/ and replace / with _
-    const filename =
-      htmlPath
-        .replace(/^\/v1\/legislation\/eli\//, "")
-        .replace(/\//g, "_") + "";
+    const filename = htmlPath.replace(/^\/v1\/legislation\/eli\//, "").replace(/\//g, "_") + "";
     await writeFile(join(outDir, filename), html, "utf8");
   });
 
   const failed = results.filter((r) => r.status === "rejected");
-  console.log(
-    `[${type}] Done. ${results.length - failed.length} saved, ${failed.length} failed.`,
-  );
+  console.log(`[${type}] Done. ${results.length - failed.length} saved, ${failed.length} failed.`);
   failed.forEach((r) => console.error(`  ✗ ${r.reason?.message ?? r.reason}`));
 }
 

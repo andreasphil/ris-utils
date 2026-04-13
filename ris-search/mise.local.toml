@@ -5,7 +5,7 @@ lefthook = "latest"
 trivy = "latest"
 
 [env]
-DOCKER_HOST="unix:///Users/andreas/.config/colima/default/docker.sock"
+DOCKER_HOST = "unix:///Users/andreas/.config/colima/default/docker.sock"
 NUXT_PUBLIC_RIS_BACKEND_URL = "http://localhost:8090"
 PLAYWRIGHT_HTML_OPEN = "never"
 

@@ -40,9 +40,7 @@ const eliTypes = [
     name: "Expression ELI",
     level: "Dokument",
     exp: /^eli\/bund\/(?<agent>[^/]+)\/(?<year>[^/]+)\/(?<naturalIdentifier>[^/]+)\/(?<pointInTime>[^/]+)\/(?<version>[^/]+)\/(?<language>[^/]+)\/(?<subtype>[^/.]+)$/,
-    examples: [
-      "eli/bund/bgbl-1/2021/s4/2021-03-01/1/deu/regelungstext-verkuendung-1",
-    ],
+    examples: ["eli/bund/bgbl-1/2021/s4/2021-03-01/1/deu/regelungstext-verkuendung-1"],
   },
   {
     // "eli/bund/{agent}/{year}/{naturalIdentifier}/{pointInTime}/{version}/{language}/{pointInTimeManifestation?}/{subtype}.{format}"

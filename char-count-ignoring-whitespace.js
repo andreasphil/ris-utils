@@ -75,9 +75,7 @@ console.log(styleText(["cyan", "bold"], `Searching for: "${searchStr}"`));
 console.log(styleText(["cyan", "bold"], "In:") + ` "${input}"`);
 
 if (ranges.length) {
-  console.log(
-    styleText(["cyan", "bold"], "Found ranges:") + ` ${printRanges(ranges)}`,
-  );
+  console.log(styleText(["cyan", "bold"], "Found ranges:") + ` ${printRanges(ranges)}`);
 
   console.log("");
   console.log(printResult(input, ranges));

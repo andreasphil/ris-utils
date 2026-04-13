@@ -62,7 +62,6 @@ const entries = readFileSync(file, "utf-8")
   .map((i) => i.join(","))
   .join("\n");
 
-const csv =
-  "branch,name,trigger,elapsed,timestamp,message,status,result\n" + entries;
+const csv = "branch,name,trigger,elapsed,timestamp,message,status,result\n" + entries;
 
 writeFileSync(file.replace(".txt", ".csv"), csv, "utf-8");
