@@ -3,6 +3,8 @@ java = "21"
 lefthook = "latest"
 "npm:@playwright/cli" = "latest"
 trivy = "latest"
+1password-cli = "latest"
+acli = "latest"
 
 [env]
 DOCKER_HOST = "unix:///Users/andreas/.config/colima/default/docker.sock"
