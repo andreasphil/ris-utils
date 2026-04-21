@@ -1,0 +1,43 @@
+{
+  "languages": {
+    "Java": {
+      "format_on_save": "off"
+    },
+    "Vue.js": {
+      "language_servers": ["!eslint", "vtsls", "..."]
+    }
+  },
+  "lsp": {
+    "jdtls": {
+      "settings": {
+        // If jdtls reports errors related to failed code generation, try:
+        // - generate nlex code: ./gradlew generate-nlex-wsdl
+        // - find + wipe cache (look for -data): ps aux | grep jdtls | grep -v grep
+        // - restart LSP
+        "initialization_options": {
+          "workspaceFolders": ["file:///Users/andreas/Projects/ris-search/backend"],
+          "settings": {
+            "java": {
+              "configuration": {
+                "updateBuildConfiguration": "automatic"
+              },
+              "import": {
+                "gradle": {
+                  "enabled": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tailwindcss-language-server": {
+      "settings": {
+        "classFunctions": ["tw"],
+        "experimental": {
+          "configFile": "./frontend/node_modules/@digitalservicebund/ris-ui/dist/style.css"
+        }
+      }
+    }
+  }
+}
