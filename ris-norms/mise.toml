@@ -1,6 +1,9 @@
 [tools]
 java = "21"
 lefthook = "latest"
+node = "24"
+pnpm = "10"
+trivy = "latest"
 
 [tasks.frontend]
 description = "Run frontend"

@@ -1,15 +1,19 @@
 [tools]
-java = "21"
-lefthook = "latest"
 "npm:@playwright/cli" = "latest"
-trivy = "latest"
 1password-cli = "latest"
 acli = "latest"
+java = "21"
+lefthook = "latest"
+node = "24"
+pnpm = "10"
+trivy = "latest"
 
 [env]
 DOCKER_HOST = "unix:///Users/andreas/.config/colima/default/docker.sock"
 NUXT_PUBLIC_RIS_BACKEND_URL = "http://localhost:8090"
 PLAYWRIGHT_HTML_OPEN = "never"
+
+# Frontend tasks ------------------------------------------
 
 [tasks.frontend]
 usage = """
@@ -41,6 +45,8 @@ usage = """
 dir = "frontend"
 run = "NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED=${usage_private} pnpm exec playwright test --ui"
 
+# Backend tasks -------------------------------------------
+
 [tasks.backend]
 usage = """
   flag "-s --staging" default="false"
@@ -48,7 +54,8 @@ usage = """
 dir = "backend"
 run = """
   if [[ ${usage_staging?} == "true" ]]; then
-    kubectl port-forward deployment/ris-portal-backend-local -n ris-staging 8090:8080
+    cd ../frontend/staging-proxy
+    ./run.sh
   else
     ./gradlew clean bootRun --args='--spring.profiles.active=default,e2e'
   fi
@@ -66,18 +73,15 @@ run = "./gradlew integrationTest --exclude-task test"
 dir = "backend"
 run = "./gradlew integrationTest --tests 'de.bund.digitalservice.ris.search.integration.SwaggerIntegrationTest'"
 
+# Infra ---------------------------------------------------
+
 [tasks.services]
 run = "docker compose up -d"
 
 [tasks."services:stop"]
 run = "docker compose down"
 
-[tasks.http]
-usage = """
-  arg "<url>"
-  arg "[params]" var=#true
-"""
-run = "http -a \"basic-auth-staging:$(op read 'op://Team NeuRIS/Basic auth public portal staging/password')\" https://ris-portal.dev.ds4g.net/${usage_url} ${usage_params}"
+# Repo housekeeping ---------------------------------------
 
 [tasks.ticket]
 usage = """
@@ -96,6 +100,3 @@ run = """
   fi
   acli jira workitem view "$ticket" $web_flag
 """
-
-[tasks.opencode]
-run = "opencode"
