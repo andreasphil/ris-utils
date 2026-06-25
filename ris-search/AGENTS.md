@@ -17,6 +17,8 @@ This project is a mono-repo including both the backend and frontend for the NeuR
 
 ## Good to know
 
+IMPORTANT: Never attempt to use vision to look at screenshots, pictures or similar. Vision is not available, trying to use it will break the session.
+
 For all changes you make, ensure type checking and tests still pass. If existing tests are starting to fail after making changes, ask before changing them.
 
 Test fixtures for E2E tests can be found in `backend/e2e-data`.
@@ -31,7 +33,7 @@ We use Nuxt's auto import feature.
 - Run tests in the frontend folder with `pnpm exec playwright test <options>`
 - Use `--project chromium` by default unless testing cross-browser issues
 - Use `--grep "test name"` to filter tests
-- Set `NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED=true` (always do this unless you have a reason not to) 
+- Set `NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED=true` (always do this unless you have a reason not to)
 - Run minimal tests to save time, but if an entire view changed, run all tests to catch regressions
 
 ## Unit tests
