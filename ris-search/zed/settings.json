@@ -42,7 +42,7 @@
       "settings": {
         "classFunctions": ["tw"],
         "experimental": {
-          "configFile": "./frontend/node_modules/@digitalservicebund/ris-ui/dist/style.css"
+          "configFile": "./frontend/src/assets/main.css"
         }
       }
     }
