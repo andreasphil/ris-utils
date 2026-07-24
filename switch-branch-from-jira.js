@@ -116,7 +116,7 @@ function formatBranchName(workItem) {
 /** @param {string} name */
 async function branchExists(name) {
   try {
-    await exec(`git branch | grep ${name}`);
+    await exec(`git branch | grep -E "(^|\\s)${name}($|\\s)"`);
     return true;
   } catch {
     return false;
