@@ -116,7 +116,7 @@ Gradle's conflict-resolution (highest version wins) ensures the pinned version i
 
 ### Frontend (Node.js) fixes
 
-**If it's a direct dependency:** update the version in `frontend/package.json` or `api-docs/package.json` directly (depending on which image was scanned).
+**If it's a direct dependency:** update the version in `frontend/package.json` or `api-docs/package.json` directly (depending on which image was scanned). You might also need to add an entry to the `minimumReleaseAgeExclude` property in `pnpm-workspace.yaml`.
 
 **If it's a transitive dependency:**
 
