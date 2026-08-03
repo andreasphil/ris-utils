@@ -4,6 +4,7 @@ acli = "latest"
 java = "21"
 lefthook = "latest"
 trivy = "latest"
+zizmor = "latest"
 
 [env]
 DOCKER_HOST = "unix:///Users/andreas/.config/colima/default/docker.sock"
