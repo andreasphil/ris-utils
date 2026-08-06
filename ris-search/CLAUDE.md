@@ -9,6 +9,7 @@ This project is a mono-repo including both the backend and frontend for the NeuR
   - Component library: PrimeVue
   - Unit tests: Vitest + `@testing-library/vue`
   - E2E tests: Playwright
+  - Component playground: Storybook
 
 - `backend/`:
   - Java 21 + Spring Boot REST API
@@ -16,8 +17,6 @@ This project is a mono-repo including both the backend and frontend for the NeuR
   - Controllers: `backend/src/main/java/de/bund/digitalservice/ris/search/controller`
 
 ## Good to know
-
-IMPORTANT: Never attempt to use vision to look at screenshots, pictures or similar. Vision is not available, trying to use it will break the session.
 
 For all changes you make, ensure type checking and tests still pass. If existing tests are starting to fail after making changes, ask before changing them.
 
@@ -50,6 +49,18 @@ We use Nuxt's auto import feature.
   - All defined events are emitted as expected
   - ARIA attributes are set correctly
   - All defined models work as expected
+  - Expected interactions work, even if not explicitly defined as an event (e.g. click)
+
+## Storybook and components in `frontend/src/components/ui/`
+
+Any components in `ui/` need to follow these conventions:
+
+- They should be portable. They can't depend on Nuxt-specific functionality or any other components outside of `ui/`. They are allowed to depend on `utils/` and `composables/`, provided those don't use any Nuxt-specific functionality either.
+- They can't use auto-imports or aliases. Use relative imports instead.
+- They have a story named like `ComponentName.stories.ts`, placed next to the component.
+- Components are allowed to import icons from `~icons`, and to use Tailwind.
+
+Storybook does not understand any Nuxt-magic such as aliases, auto-imports, and globals. Stories of components relying on them will crash.
 
 ## Important commands
 
