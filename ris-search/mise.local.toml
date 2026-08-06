@@ -5,6 +5,8 @@ java = "21"
 lefthook = "latest"
 trivy = "latest"
 zizmor = "latest"
+pnpm = "11"
+node = "26"
 
 [env]
 DOCKER_HOST = "unix:///Users/andreas/.config/colima/default/docker.sock"
@@ -27,10 +29,7 @@ run = "pnpm test:watch"
 
 [tasks."frontend:fix"]
 dir = "frontend"
-run = """
-  pnpm style:fix
-  pnpm typecheck
-"""
+run = "pnpm style:fix"
 
 [tasks."frontend:api-types"]
 depends = ["backend:api-types"]
@@ -52,6 +51,10 @@ run = """
   STAGING_BASIC_AUTH_PASSWORD="$(op read 'op://Team NeuRIS/Portal Staging Basic Auth/password')" \
   pnpm playwright test --project=smoke-tests
 """
+
+[tasks.storybook]
+dir = "frontend"
+run = "node --run storybook"
 
 # Backend tasks -------------------------------------------
 
