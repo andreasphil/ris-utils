@@ -1,7 +1,6 @@
 [tools]
-"npm:@playwright/cli" = "latest"
 acli = "latest"
-java = "21"
+java = "25"
 lefthook = "latest"
 trivy = "latest"
 zizmor = "latest"
@@ -11,7 +10,7 @@ node = "26"
 [env]
 DOCKER_HOST = "unix:///Users/andreas/.config/colima/default/docker.sock"
 NODE_NO_WARNINGS = 1
-NUXT_PUBLIC_RIS_BACKEND_URL = "http://localhost:8090"
+NUXT_PUBLIC_RIS_BACKEND_URL = "http://localhost:8080"
 PLAYWRIGHT_HTML_OPEN = "never"
 
 # Frontend tasks ------------------------------------------
