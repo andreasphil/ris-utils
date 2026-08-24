@@ -6,6 +6,7 @@ trivy = "latest"
 zizmor = "latest"
 pnpm = "11"
 node = "26"
+"npm:@playwright/cli" = "latest"
 
 [env]
 DOCKER_HOST = "unix:///Users/andreas/.config/colima/default/docker.sock"
