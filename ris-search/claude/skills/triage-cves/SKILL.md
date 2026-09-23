@@ -15,9 +15,11 @@ Given one or more Trivy SARIF files, I:
 
 CI only fails on HIGH/CRITICAL — both scan jobs gate on `grep -qE 'HIGH|CRITICAL'` over the SARIF. That is why MEDIUM/LOW are offered rather than fixed by default.
 
+Parsing/classification and templated file edits are scripted (`scripts/`) — the only judgment calls left are: which SARIF file(s) to analyze, which target version to pin, and whether to also fix MEDIUM/LOW.
+
 ## Fast path: direct pin
 
-If the user provides a CVE ID, package coordinate, and target version directly — e.g. _"fix CVE-2025-1234 by pinning `com.example:foo` to `2.3.4`"_ — skip Steps 1–3 and go straight to **Step 4** to apply the fix. Skip Step 5 (no report to generate). Output the Step 6 summary when done.
+If the user provides a CVE ID, package coordinate, and target version directly — e.g. _"fix CVE-2025-1234 by pinning `com.example:foo` to `2.3.4`"_ — skip straight to `scripts/apply-fix.js` (see Step 4). No report needed. Still output the Step 6 summary when done.
 
 ## Step 1: Gather inputs
 
@@ -27,23 +29,22 @@ If the user has not provided SARIF file paths, ask:
 
 Accept any number of files. Each is analyzed independently; findings from all files are combined into a single report.
 
-## Step 2: Read and classify every finding
+## Step 2 & 3: Parse, classify, and render the report
 
-For each rule entry in `runs[].tool.driver.rules[]`, read:
+Run:
 
-- `id` — the CVE/GHSA identifier
-- `name` — **this is the key classifier**:
-  - `OsPackageVulnerability` → image-level, cannot be fixed in code
-  - `LanguageSpecificPackageVulnerability` → application-level, can be fixed
-- `properties.tags` or `properties.security-severity` — severity (CRITICAL/HIGH/MEDIUM/LOW)
+```bash
+node .claude/skills/triage-cves/scripts/parse-sarif.js <file1.sarif> [file2.sarif ...]
+```
 
-For each result in `runs[].results[]`, read the `message.text` for installed version, fixed version, and package name. Read `locations[].physicalLocation.artifactLocation.uri` for the file path — this tells you the ecosystem:
+This prints the triage report directly (grouped HIGH/CRITICAL app, MEDIUM/LOW app, OS/unreachable tables) — post it as-is, or condense to a couple of lines if there are only one or two findings. Add `--json` to get the classified findings as structured data instead (useful for scripting Step 4 across many findings).
 
-- Path contains `BOOT-INF/lib/` or ends in `.jar` → Java/Gradle dependency
-- Path contains `node_modules/` or ends in `package.json` → Node.js/npm dependency
-- Path contains `npm/node_modules/` or `pnpm/node_modules/` (the package manager's own bundled deps, not the app's) → cannot be patched via app code
+The script implements this classification, for reference/debugging:
 
-Also check `runs[].properties.imageName` to know which container image was scanned. Which scan produced the SARIF determines where a suppression would go:
+- `runs[].tool.driver.rules[].name`: `OsPackageVulnerability` → image-level (can't fix in code); `LanguageSpecificPackageVulnerability` → application-level (can fix)
+- Ecosystem from `locations[].physicalLocation.artifactLocation.uri`: `BOOT-INF/lib/`/`.jar` → Java/Gradle; `node_modules/`/`package.json` → Node; a path under `npm/node_modules/` or `pnpm/node_modules/` → bundled inside the package manager itself, not reachable via app code
+- Severity from `properties.tags` or `properties.security-severity`
+- Ignore-file mapping (which scan → which `.trivyignore`):
 
 | Scan | Defined in | Ignore file applied |
 | ---- | ---------- | ------------------- |
@@ -54,73 +55,26 @@ Also check `runs[].properties.imageName` to know which container image was scann
 
 There is no source (`fs`) scan for backend or api-docs — those are image-scanned only.
 
-## Step 3: Produce the triage report
-
-Output the report inline in the conversation (no file written). Keep it proportional: for one or two findings a couple of lines is enough. Use the full grouped form only when there are many.
-
-```
-## Vulnerability Triage Report
-Scanned image(s): <imageName(s)>
-
-### HIGH / CRITICAL — Application (action required)
-| CVE | Package | Installed | Fixed in | Ecosystem |
-
-### MEDIUM / LOW — Application (fixable)
-| CVE | Package | Installed | Fixed in | Ecosystem |
-
-### OS / Image packages (cannot fix in code)
-| CVE | Severity | Package | Installed | Fixed in |
-These require updating the container base image.
-```
-
 ## Step 4: Fix HIGH/CRITICAL application vulnerabilities
 
-Apply fixes immediately after the report. Follow the ecosystem-specific rules below.
+Apply fixes immediately after the report. If there are no HIGH/CRITICAL application findings, state that clearly and skip to Step 5.
 
-If there are no HIGH/CRITICAL application findings, state that clearly and skip to Step 5.
+**Choosing the target version** is not scripted — use the lowest fixed version that does NOT require a major upgrade (prefer patch/minor bumps within the same major line).
 
 ### Backend (Java/Gradle) fixes
 
-Files to edit:
+**Direct dependency:** bump the version in `backend/gradle/libs.versions.toml` directly instead of using the script below.
 
-- `backend/gradle/libs.versions.toml`
-- `backend/build.gradle.kts`
+**Transitive dependency — override it:**
 
-**How to override a transitive dependency:**
-
-1. Add a pinned library entry at the end of `[libraries]` in `libs.versions.toml`, with a `# <CVE-ID>` comment on the line above. Use the table form with an inline `version` — not a `version.ref`, and not the `"group:artifact:version"` shorthand — so the pinned version sits next to its CVE comment:
-
-```toml
-# CVE-2026-55831
-netty-codec-http = { module = "io.netty:netty-codec-http", version = "4.2.17.Final" }
+```bash
+node .claude/skills/triage-cves/scripts/apply-fix.js backend \
+  --cve <CVE-ID> --alias <alias> --module <group:artifact> --version <version> [--bom]
 ```
 
-2. Add the dependency to the `dependencies {}` block in `build.gradle.kts`, repeating the `// <CVE-ID>` comment, grouped with the other CVE overrides:
+This inserts the pin into `backend/gradle/libs.versions.toml` (grouped at the end of `[libraries]`, with a `# <CVE-ID>` comment) and the matching `implementation(...)` line into `backend/build.gradle.kts` (grouped with other CVE overrides). Use `--bom` if one CVE spans several artifacts from the same project — pin the project's BOM instead of each artifact; the script wraps it as `implementation(platform(libs.<alias>))`.
 
-```kotlin
-// CVE-2026-55831
-implementation(libs.netty.codec.http)
-```
-
-Gradle's conflict-resolution (highest version wins) ensures the pinned version is used everywhere.
-
-**If one CVE spans several artifacts from the same project, pin its BOM** instead of listing each artifact, and wrap it in `platform(...)`:
-
-```toml
-# CVE-2026-5588
-bouncycastle-bom = { module = "org.bouncycastle:bc-jdk18on-bom", version = "1.85.2" }
-```
-
-```kotlin
-// CVE-2026-5588
-implementation(platform(libs.bouncycastle.bom))
-```
-
-**If it's a direct dependency:** bump the version in `libs.versions.toml` directly instead.
-
-**Version choice:** use the lowest fixed version that does NOT require a major upgrade. Prefer patch/minor bumps within the same major line.
-
-**Alias naming:** there is no strict rule — match the existing entries, which keep the artifactId and add just enough group context to stay unambiguous:
+**Alias naming:** no strict rule — match the existing entries, which keep the artifactId and add just enough group context to stay unambiguous:
 
 | Maven coordinate                                | TOML alias           | Gradle accessor           |
 | ----------------------------------------------- | -------------------- | ------------------------- |
@@ -141,17 +95,19 @@ cd backend
 
 ### Frontend / API docs (Node.js) fixes
 
-**If it's a direct dependency:** update the version in `frontend/package.json` or `api-docs/package.json` directly, depending on which scan flagged it. Both projects set `minimumReleaseAge`, so a very fresh release also needs an entry in that project's `minimumReleaseAgeExclude` list in `pnpm-workspace.yaml`.
+**Direct dependency:** update the version in `frontend/package.json` or `api-docs/package.json` directly, depending on which scan flagged it. Both projects set `minimumReleaseAge`, so a very fresh release also needs an entry in that project's `minimumReleaseAgeExclude` list in `pnpm-workspace.yaml`.
 
-**If it's a transitive dependency:**
+**Transitive dependency:**
 
 1. First try `pnpm up` (from `frontend/` or `api-docs/`) — bumps all deps to their latest allowed version and often resolves transitive issues.
-2. If the issue persists, add an override to that project's `pnpm-workspace.yaml`. `api-docs/pnpm-workspace.yaml` has no `overrides:` block yet — add one if it's needed there:
+2. If the issue persists, add an override:
 
-```yaml
-overrides:
-  some-package: "^2.3.2" # CVE-2025-12345
+```bash
+node .claude/skills/triage-cves/scripts/apply-fix.js pnpm \
+  --project <frontend|api-docs> --cve <CVE-ID> --package <name> --version <range>
 ```
+
+This adds/creates the `overrides:` block in that project's `pnpm-workspace.yaml` (api-docs has none by default).
 
 3. Then run `pnpm install`.
 
@@ -165,9 +121,7 @@ After completing (or skipping) Step 4, if there are MEDIUM or LOW application-le
 
 > "I found [N] MEDIUM/LOW application vulnerabilities. Want me to fix those too?"
 
-If the user says yes, apply the same ecosystem-specific fix logic from Step 4 to those findings.
-
-Do not attempt to fix them automatically without asking first.
+If the user says yes, apply the same ecosystem-specific fix logic from Step 4 to those findings. Do not attempt to fix them automatically without asking first.
 
 ## Step 6: Report what was done
 
@@ -207,3 +161,11 @@ trivy fs ./frontend --skip-dirs node_modules --ignorefile frontend/.trivyignore 
 docker build -t ris-frontend-check ./frontend        # or ./api-docs, ./backend
 trivy image ris-frontend-check --ignorefile frontend/.trivyignore --format table
 ```
+
+## scripts/
+
+- `parse-sarif.js <file...> [--json]` — Steps 2/3: parses and classifies findings, renders the triage report (or emits JSON with `--json`).
+- `apply-fix.js backend --cve <id> --alias <alias> --module <group:artifact> --version <version> [--bom]` — Step 4: inserts a backend Gradle pin.
+- `apply-fix.js pnpm --project <frontend|api-docs> --cve <id> --package <name> --version <range>` — Step 4: inserts/creates a pnpm override.
+
+Both `apply-fix.js` modes only do the mechanical file edit — run the accompanying `./gradlew :dependencies --write-locks` / `pnpm install` yourself afterward.

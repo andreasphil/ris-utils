@@ -9,102 +9,69 @@ Dependencies that were pinned or ignored because of a CVE eventually get fixed u
 
 Important: while we only gate CI on HIGH and CRITICAL, do not remove a mitigation if doing so re-introduces a CVE of **any** severity, including MEDIUM and LOW.
 
+Discovery and the remove→rebuild→compare→restore-or-drop loop are scripted (`scripts/`) — the only judgment call left is asking before deleting a pnpm override that isn't CVE-related.
+
 ## Step 1: Find all existing CVE mitigations
 
-There are six places, but several are usually empty — check what's actually populated before planning work.
-
-| # | Location | What counts as a candidate |
-| - | -------- | -------------------------- |
-| 1 | `backend/gradle/libs.versions.toml` | entries preceded by a `# CVE-` / `# GHSA-` comment |
-| 2 | `backend/.trivyignore` | CVE IDs listed (header only = nothing to do) |
-| 3 | `frontend/pnpm-workspace.yaml` | every entry under `overrides:` |
-| 4 | `frontend/.trivyignore` | CVE IDs listed |
-| 5 | `api-docs/pnpm-workspace.yaml` | every entry under `overrides:` (no such block today) |
-| 6 | `api-docs/.trivyignore` | CVE IDs listed (header only = nothing to do) |
-
-Start by listing what exists, so empty locations cost nothing:
+Run:
 
 ```bash
-grep -n -A1 '^# \(CVE\|GHSA\)' backend/gradle/libs.versions.toml
-grep -c '^[A-Z]' backend/.trivyignore api-docs/.trivyignore frontend/.trivyignore
-sed -n '/^overrides:/,/^$/p' frontend/pnpm-workspace.yaml api-docs/pnpm-workspace.yaml
+bash .claude/skills/maintain-cves/scripts/audit.sh
 ```
 
-For backend pins, note the matching `implementation(libs.<alias>)` line in `backend/build.gradle.kts` — it must be removed together with the toml entry. BOM pins appear as `implementation(platform(libs.<alias>))`.
+This lists every candidate across all six locations (backend `libs.versions.toml` pins + their matching `build.gradle.kts` lines, all three `.trivyignore` files, and both `pnpm-workspace.yaml` `overrides:` blocks), and separately flags any pnpm override entry that has no `# CVE-`/`# GHSA-` comment — those need to be asked about before removal (see Notes). Most locations are usually empty; the script's output makes that immediately obvious rather than something you need to check file-by-file.
 
-The pnpm `overrides:` entries are not all CVE-related. Treat them all as candidates, but see the note at the bottom before deleting one that doesn't cause a CVE to reappear.
+## Step 2: Check whether each candidate is still needed
 
-## Step 2: Check whether each is still needed
+For each candidate `audit.sh` lists, run `scripts/verify-pin.sh` with the mode matching its location. It handles the whole remove → rebuild/rescan → compare → restore-or-drop cycle and leaves the tree in the correct state on exit (removed if no longer needed, restored if still needed). It's slow (real gradle/pnpm/docker/trivy runs), so expect each candidate to take a while.
 
-### Backend pins
+```bash
+# backend/gradle/libs.versions.toml pins
+bash .claude/skills/maintain-cves/scripts/verify-pin.sh backend <alias>
 
-The backend runs `dependencyLocking { lockAllConfigurations() }`, which changes how this check must be done. **`gradle.lockfile` pins every version independently of `libs.versions.toml`.** If you remove a pin and run a plain `dependencies` task, the lockfile still injects the old version as a `{strictly <old>}` constraint and the report prints misleading lines like:
+# frontend or api-docs pnpm overrides (api-docs has no fs scan — use `ignore` mode
+# against the built image instead, see below)
+bash .claude/skills/maintain-cves/scripts/verify-pin.sh pnpm <frontend|api-docs> <package>
+
+# any of the three .trivyignore files
+bash .claude/skills/maintain-cves/scripts/verify-pin.sh ignore <frontend|backend|api-docs> <cve-id>
+```
+
+It prints `DROP — ...` or `KEEP — ...` with the resolved version/scan result it observed — that line is exactly what Step 3's report needs.
+
+### What each mode does, for troubleshooting
+
+**`backend <alias>`**: removes the toml pin + its `build.gradle.kts` line (via `remove-pin.js`, so the file edits stay structurally correct), then runs
+
+```bash
+./gradlew dependencies --configuration productionRuntimeClasspath --write-locks | grep -i <artifact-name>
+```
+
+`productionRuntimeClasspath` is what `bootJar` packs into `BOOT-INF/lib`, i.e. exactly what the image scan sees. **`gradle.lockfile` pins every version independently of `libs.versions.toml`** (`dependencyLocking { lockAllConfigurations() }`), so without `--write-locks` the lockfile still injects the old version as a `{strictly <old>}` constraint and prints misleading lines like:
 
 ```
 +--- io.netty:netty-codec-http:{strictly 4.2.17.Final} -> 4.2.15.Final (c)
 \--- io.netty:netty-codec-http:4.2.17.Final FAILED
 ```
 
-That still exits `BUILD SUCCESSFUL`, and a naive grep for the artifact sees the old pinned version — so it looks like the pin is redundant when it isn't. Always pass `--write-locks` so lock state is refreshed before you read the resolved version.
+That still exits `BUILD SUCCESSFUL` — a naive read sees the old pinned version and wrongly concludes the pin is still needed. The script passes `--write-locks` and retries once if it still sees `FAILED`/`{strictly...}`; if that persists it restores the pin and asks for a manual check rather than guessing. The script finishes with a full `./gradlew :dependencies --write-locks` regeneration (a single `--configuration` run only rewrites that one configuration and leaves the lockfile internally inconsistent) — check `git diff --stat backend/gradle.lockfile` afterward. If you abandon the audit partway, `git checkout -- backend/gradle.lockfile backend/gradle/libs.versions.toml backend/build.gradle.kts` restores everything.
 
-For each pinned entry:
-
-1. **Temporarily remove** both the toml entry (comment line + library line) and the `implementation(...)` line in `build.gradle.kts`.
-2. Read the naturally-resolved version:
+**`pnpm <project> <package>`**: removes the override (via `remove-pin.js`), runs `pnpm install`, then reproduces CI's source scan:
 
 ```bash
-cd backend
-./gradlew dependencies --configuration productionRuntimeClasspath --write-locks | grep -i <artifact-name>
-```
-
-Use `productionRuntimeClasspath`, not `runtimeClasspath` — it is what `bootJar` packs into `BOOT-INF/lib`, i.e. exactly what the image scan sees. (They differ only by `spring-boot-devtools` today, but the production one is the one that matters.)
-
-3. If the resolved version is **≥ the previously pinned version**, the upstream BOM (usually Spring Boot) already picks up a safe version — drop the pin for good.
-4. If it resolves lower, restore the pin and its `implementation(...)` line.
-5. If any `FAILED` marker or `{strictly ...}` line still appears, the lock state didn't refresh — rerun with `--write-locks` before drawing a conclusion.
-
-Because `--write-locks` rewrites `gradle.lockfile` as a side effect, finish with a full regeneration once all decisions are made, and confirm the diff only contains intended changes:
-
-```bash
-./gradlew :dependencies --write-locks
-git diff --stat gradle.lockfile
-```
-
-Passing `--configuration` together with `--write-locks` only rewrites that one configuration, which leaves the lockfile internally inconsistent — the final full run above is what repairs it. If you abandon the audit partway, `git checkout -- gradle.lockfile gradle/libs.versions.toml build.gradle.kts` restores everything.
-
-### Frontend overrides
-
-1. Remove the entries under `overrides:` in `frontend/pnpm-workspace.yaml`. With only a handful of entries, removing them one at a time attributes findings more clearly than removing all at once.
-2. Reproduce CI's source scan — the flags matter, since a bare `trivy fs .` scans `node_modules` and buries the real findings in noise:
-
-```bash
-cd frontend
-pnpm install
 trivy fs . --skip-dirs node_modules --ignorefile .trivyignore --format table
 ```
 
-3. Any CVE that reappears needs its override restored. Add back only those entries.
-4. Run `pnpm install` again after restoring to relock the correct versions.
+(a bare `trivy fs .` would scan `node_modules` and bury the real findings in noise). Greps the scan output for the override's CVE ID (or the package name if the entry had no CVE comment). `api-docs/pnpm-workspace.yaml` has no `overrides:` block today — CI also runs no `fs` scan for api-docs, so if one gets added, verify it with `ignore` mode against the built image instead.
 
-### API docs overrides
-
-`api-docs/pnpm-workspace.yaml` currently has no `overrides:` block, so there is normally nothing to check. If one has been added since, apply the frontend procedure with one difference: CI runs **no** `fs` scan for api-docs, so verify against the image scan below instead.
-
-### Image ignores (`backend`, `frontend`, `api-docs`)
-
-Same procedure for each; skip any file that contains only its header comment.
-
-1. Remove the CVE entries from `<app>/.trivyignore`.
-2. Build the image and scan it:
+**`ignore <app> <cve-id>`**: removes the entry from `<app>/.trivyignore`, builds the image, and scans it:
 
 ```bash
 docker build -t ris-<app>-check ./<app>
 trivy image ris-<app>-check --format table
 ```
 
-3. Any CVE that reappears needs its ignore entry restored, keeping it under the comment that explains which bundled tool it comes from.
-
-Note that `frontend/.trivyignore` feeds **both** the frontend source scan and the frontend image scan. An entry that looks unnecessary in the image scan may still be suppressing a source-scan finding, so check it against both before removing it.
+`frontend/.trivyignore` feeds **both** the frontend source scan and the frontend image scan — an entry that looks unnecessary in the image scan may still be suppressing a source-scan finding, so if this mode says DROP for a frontend entry, also re-check it against `pnpm` mode's `trivy fs` scan before removing it for good.
 
 ## Step 3: Report what changed
 
@@ -124,10 +91,16 @@ Note that `frontend/.trivyignore` feeds **both** the frontend source scan and th
 - api-docs overrides / api-docs .trivyignore — empty, nothing to audit
 ```
 
-State the resolved version you actually observed for anything you kept. "Still needed" without a version is not verifiable later.
+State the resolved version/scan result `verify-pin.sh` actually observed for anything you kept — its DROP/KEEP output line has this. "Still needed" without a version is not verifiable later.
 
 ## Notes
 
 - **Do the whole audit in one session** so the picture stays consistent, and leave the tree clean: either commit the removals or `git checkout --` the scratch edits.
 - **Overrides and `.trivyignore` serve different purposes.** Overrides fix vulnerabilities in the app's own dependency graph; `.trivyignore` suppresses findings from the base image or from a package manager's bundled deps that app code cannot reach. Check them independently.
-- **Don't remove a non-CVE override.** If removing a `pnpm-workspace.yaml` entry causes no CVE to reappear, it may still exist for compatibility or stability reasons. Ask before deleting it.
+- **Don't remove a non-CVE override.** `audit.sh` flags any `pnpm-workspace.yaml` entry that has no `# CVE-`/`# GHSA-` comment. If removing one of those causes no CVE to reappear, it may still exist for compatibility or stability reasons — ask before deleting it.
+
+## scripts/
+
+- `audit.sh` — Step 1: lists every existing CVE mitigation across all six locations, and flags non-CVE pnpm overrides.
+- `remove-pin.js backend --alias <alias>` / `remove-pin.js pnpm --project <frontend|api-docs> --package <name>` — structural removal of one entry (used internally by `verify-pin.sh`); prints the removed entry's CVE/version as JSON.
+- `verify-pin.sh <backend|pnpm|ignore> ...` — Step 2: the full remove → rebuild/rescan → compare → restore-or-drop loop for one candidate.

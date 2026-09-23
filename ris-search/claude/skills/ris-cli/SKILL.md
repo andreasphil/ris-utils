@@ -155,7 +155,7 @@ Listed below as "search flags" wherever a command accepts them:
 - `ris case-law get <documentNumber>` — Court decision metadata as JSON
 - `ris case-law xml <documentNumber>` — Court decision as XML
 - `ris case-law html <documentNumber>` — Court decision as HTML
-- `ris case-law zip <documentNumber>` — Decision as a ZIP archive (XML plus attachments)
+- `ris case-law zip <documentNumber>` — Court decision as a ZIP archive (XML plus attachments)
 - `ris case-law resource <documentNumber> <filename>` — An image or other file embedded in a decision
 - `ris case-law courts [prefix]` — Courts that have decisions in the database, with decision counts
 - `ris case-law changelog` — Documents added, changed or deleted in a time window (default: last 24h)
@@ -178,6 +178,8 @@ Listed below as "search flags" wherever a command accepts them:
   Flags: `--on-date <date>`
 - `ris legislation article <eli> <articleEid>` — A single article (§) as HTML
   Flags: `--on-date <value>`
+- `ris legislation article-versions <eli> <articleEid>` — Every historical version of a single article (§)
+  Flags: `--on-date <value>`
 - `ris legislation zip <eli>` — Manifestation as a ZIP archive (XML plus attachments)
   Flags: `--on-date <value>`
 - `ris legislation resource <eli> <filename>` — A file (PDF, image, XML) inside a manifestation
@@ -195,6 +197,7 @@ Listed below as "search flags" wherever a command accepts them:
 - `ris literature get <documentNumber>` — Literature item metadata as JSON
 - `ris literature xml <documentNumber>` — Literature item as XML
 - `ris literature html <documentNumber>` — Literature item as HTML
+- `ris literature zip <documentNumber>` — Literature item as a ZIP archive (XML plus attachments)
 - `ris literature changelog` — Documents added, changed or deleted in a time window (default: last 24h)
   Flags: `--from <value>`, `--to <value>`
 
@@ -207,6 +210,7 @@ Listed below as "search flags" wherever a command accepts them:
 - `ris directive get <documentNumber>` — Administrative directive metadata as JSON
 - `ris directive xml <documentNumber>` — Administrative directive as XML
 - `ris directive html <documentNumber>` — Administrative directive as HTML
+- `ris directive zip <documentNumber>` — Administrative directive as a ZIP archive (XML plus attachments)
 - `ris directive changelog` — Documents added, changed or deleted in a time window (default: last 24h)
   Flags: `--from <value>`, `--to <value>`
 
