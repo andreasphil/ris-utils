@@ -11,6 +11,7 @@ node = "26"
 [env]
 DOCKER_HOST = "unix:///Users/andreas/.config/colima/default/docker.sock"
 NODE_NO_WARNINGS = 1
+NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED = "true"
 NUXT_PUBLIC_RIS_BACKEND_URL = "http://localhost:8080"
 PLAYWRIGHT_HTML_OPEN = "never"
 
