@@ -81,4 +81,5 @@ pnpm test       # run the unit tests with Vitest
 pnpm typecheck  # run the typechecker
 pnpm fmt        # format
 pnpm lint       # run linting with autofix
+pnpm storybook  # run component playground
 ```
