@@ -60,17 +60,16 @@ run = "node --run storybook"
 # Backend tasks -------------------------------------------
 
 [tasks.backend]
-usage = """
-  flag "-s --staging" default="false"
-"""
+depends = ["services"]
 dir = "backend"
 run = """
-  if [[ ${usage_staging?} == "true" ]]; then
-    cd ../frontend/staging-proxy
-    ./run.sh
-  else
-    ./gradlew clean bootRun --args='--spring.profiles.active=default,e2e'
-  fi
+  ./gradlew clean bootRun --args='--spring.profiles.active=default,e2e'
+"""
+
+[tasks.staging]
+dir = "frontend/staging-proxy"
+run = """
+  ./run.sh
 """
 
 [tasks."backend:test"]
