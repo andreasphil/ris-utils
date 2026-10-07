@@ -219,10 +219,30 @@ ignore)
   restore() { mv -f "$file.bak" "$file"; }
   trap restore ERR
 
-  grep -v -F "$cve" "$file" > "$file.tmp"
+  # Removes the entry's line. If that leaves its group empty (the comment
+  # lines directly above it, with a blank line or EOF below), removes those
+  # comments and the blank line separating the group from the previous one.
+  awk -v cve="$cve" '
+    { line[NR] = $0 }
+    END {
+      for (i = 1; i <= NR; i++) {
+        trimmed = line[i]
+        gsub(/^[ \t]+|[ \t]+$/, "", trimmed)
+        if (trimmed == cve) idx = i
+      }
+      from = idx; to = idx
+      next_empty = (idx == NR || line[idx + 1] == "")
+      prev_is_entry = (idx > 1 && line[idx - 1] != "" && line[idx - 1] !~ /^#/)
+      if (idx && next_empty && !prev_is_entry) {
+        while (from > 1 && line[from - 1] ~ /^#/) from--
+        if (from > 1 && line[from - 1] == "") from--
+      }
+      for (i = 1; i <= NR; i++) if (!idx || i < from || i > to) print line[i]
+    }' "$file" > "$file.tmp"
   mv "$file.tmp" "$file"
 
-  docker build -t "ris-${app}-verify" "./$app" >/dev/null
+  # BuildKit writes its progress to stderr
+  docker build -t "ris-${app}-verify" "./$app" >/dev/null 2>&1
   scan_out=$(trivy image "ris-${app}-verify" --format table 2>/dev/null || true)
 
   if grep -q "$cve" <<<"$scan_out"; then
