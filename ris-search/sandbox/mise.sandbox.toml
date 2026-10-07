@@ -1,0 +1,14 @@
+# Global mise environment inside the sandbox. The Dockerfile installs the
+# tools. The repo's mise.local.toml is host-specific, so the sandbox ignores it
+# via MISE_IGNORED_CONFIG_PATHS, set in mise.toml (mise doesn't expand
+# templates in [settings]).
+
+[env]
+NODE_NO_WARNINGS = 1
+NUXT_PUBLIC_PRIVATE_FEATURES_ENABLED = "true"
+NUXT_PUBLIC_RIS_BACKEND_URL = "http://localhost:8080"
+PLAYWRIGHT_HTML_OPEN = "never"
+# playwright-cli defaults to google chrome, which doesn't exist for linux on arm
+PLAYWRIGHT_MCP_BROWSER = "chromium"
+# dev servers must listen on all interfaces for published ports to work
+NUXT_HOST = "0.0.0.0"

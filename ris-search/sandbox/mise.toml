@@ -1,0 +1,168 @@
+# Host-side tasks for managing the sandbox. Run them from this folder, e.g.
+# `mise run build`, or from anywhere with `mise -C sandbox run build`.
+
+[env]
+SANDBOX_NAME = "ris-sandbox"
+SANDBOX_CPUS = "8"
+SANDBOX_MEMORY = "12g"
+# absolute path, so the tasks work no matter which folder you run them from
+SANDBOX_REPO = "{{env.HOME}}/Projects/ris-search"
+# the folder this sandbox lives in. the repo symlinks .claude, CLAUDE.md and a
+# few other files into it. create mounts it read-only at the same path, so the
+# links resolve.
+SANDBOX_LINKED_DIR = "{{config_root | dirname}}"
+
+# ports published to 127.0.0.1 on the host, space-separated: frontend,
+# backend, storybook, opensearch, opensearch dashboards
+SANDBOX_PORTS = "3000 8080 6006 9200 5601"
+
+# volumes owned by this sandbox as name:path pairs, space-separated. the name
+# gets the sandbox name as a prefix. paths can't contain spaces.
+SANDBOX_VOLUMES = "gradle:/home/developer/.gradle frontend-node-modules:{{env.SANDBOX_REPO}}/frontend/node_modules api-docs-node-modules:{{env.SANDBOX_REPO}}/api-docs/node_modules"
+
+# claude config and login, shared by all sandboxes. a folder on the host,
+# because a volume can only be attached to one running container at a time.
+# claude keeps memory per project path, so projects don't mix.
+SANDBOX_CLAUDE_DIR = "{{env.HOME}}/.local/share/sandbox-claude"
+# GitHub Packages token for `backend-token`. It only grants access to public
+# packages; the username doesn't matter as the token identifies the user.
+SANDBOX_GH_PACKAGES_TOKEN_REF = "op://Employee/Public Modules Token/password"
+
+[tasks.build]
+description = "Build the sandbox image"
+run = """
+  package_json="$SANDBOX_REPO/frontend/package.json"
+  container build \
+    --tag "$SANDBOX_NAME" \
+    --build-arg "NODE_VERSION=$(jq -r .devEngines.runtime.version "$package_json")" \
+    --build-arg "PNPM_VERSION=$(jq -r .devEngines.packageManager.version "$package_json")" \
+    --build-arg "PLAYWRIGHT_VERSION=$(jq -r '.devDependencies["@playwright/test"]' "$package_json")" \
+    --build-arg "RIS_CLI_COMMIT=$(git ls-remote https://github.com/andreasphil/ris-cli.git refs/heads/main | cut -f1)" \
+    .
+"""
+
+[tasks.create]
+description = "Create and start the sandbox container from the image"
+run = """
+  args=()
+  for port in $SANDBOX_PORTS; do
+    args+=(--publish "127.0.0.1:$port:$port")
+  done
+  # container run creates missing volumes itself, but not host folders
+  mkdir -p "$SANDBOX_CLAUDE_DIR"
+  for volume in $SANDBOX_VOLUMES; do
+    args+=(--volume "$SANDBOX_NAME-${volume%%:*}:${volume#*:}")
+  done
+
+  # mount the repo at the same path as on the host. absolute paths, like the
+  # symlinks into the linked dir, then resolve inside the sandbox too. .git
+  # is read-only, so commit on the host. docker needs all capabilities.
+  # untrusted mise config in the repo would break every mise tool, so trust
+  # it, except for the host-specific mise.local.toml.
+  container run --detach --init \
+    --name "$SANDBOX_NAME" \
+    --cpus "$SANDBOX_CPUS" \
+    --memory "$SANDBOX_MEMORY" \
+    --cap-add ALL \
+    --workdir "$SANDBOX_REPO" \
+    --env "MISE_TRUSTED_CONFIG_PATHS=$SANDBOX_REPO" \
+    --env "MISE_IGNORED_CONFIG_PATHS=$SANDBOX_REPO/mise.local.toml" \
+    --mount "type=bind,source=$SANDBOX_REPO,target=$SANDBOX_REPO" \
+    --mount "type=bind,source=$SANDBOX_REPO/.git,target=$SANDBOX_REPO/.git,readonly" \
+    --mount "type=bind,source=$SANDBOX_LINKED_DIR,target=$SANDBOX_LINKED_DIR,readonly" \
+    --mount "type=bind,source=$SANDBOX_CLAUDE_DIR,target=/home/developer/.claude" \
+    "${args[@]}" \
+    "$SANDBOX_NAME"
+
+  # container can't bind-mount single files, so copy the global gitignore.
+  # --type=path expands ~, and without core.excludesFile git reads its default
+  # location. piping the content works for symlinks, which `container cp`
+  # copies as links.
+  excludes=$(git config --global --type=path core.excludesFile \
+    || echo "${XDG_CONFIG_HOME:-$HOME/.config}/git/ignore")
+  if [[ -f $excludes ]]; then
+    container exec --interactive --user developer "$SANDBOX_NAME" \
+      sh -c 'mkdir -p ~/.config/git && cat > ~/.config/git/ignore' < "$excludes"
+  fi
+"""
+
+[tasks.backend-token]
+description = "Store the GitHub Packages token for the backend in the Gradle volume"
+run = """
+  # the backend needs a GitHub token to download two public packages. the
+  # build reads it from the global_gh_packages_* properties, so this puts it
+  # in ~/.gradle/gradle.properties. that's on the Gradle volume, so it
+  # survives recreate. other lines in the file stay as they are.
+  token=$(op read "$SANDBOX_GH_PACKAGES_TOKEN_REF")
+
+  # the token goes through stdin, so it doesn't show up in the process list
+  container exec --interactive --user developer "$SANDBOX_NAME" sh -c '
+    umask 077
+    file=~/.gradle/gradle.properties
+    touch "$file"
+    grep -v "^global_gh_packages_" "$file" > "$file.tmp" || true
+    cat >> "$file.tmp"
+    mv "$file.tmp" "$file"
+  ' <<EOF
+global_gh_packages_user=sandbox
+global_gh_packages_token=$token
+EOF
+"""
+
+[tasks.start]
+description = "Start the stopped sandbox container"
+run = 'container start "$SANDBOX_NAME"'
+
+[tasks.stop]
+description = "Stop the sandbox container (keeps its state)"
+run = """
+  # give dockerd time to stop the containers inside the sandbox
+  container stop --time 30 "$SANDBOX_NAME"
+"""
+
+[tasks.shell]
+description = "Open a shell in the sandbox"
+usage = 'flag "--root" help="open a root shell instead of the developer account"'
+run = """
+  user=developer
+  if [[ ${usage_root:-false} == "true" ]]; then
+    echo "🚨 root shell"
+    user=root
+  fi
+  container exec --interactive --tty --user "$user" "$SANDBOX_NAME" bash --login
+"""
+
+[tasks.claude]
+description = "Start Claude Code in the sandbox in auto mode"
+run = """
+  # bypass mode isn't on by default, but you can switch to it with shift+tab
+  container exec --interactive --tty --user developer "$SANDBOX_NAME" \
+    claude agents --permission-mode auto --allow-dangerously-skip-permissions
+"""
+
+[tasks.delete-container]
+hide = true
+run = """
+  # stop first. dockerd needs a moment to shut down, and deleting a running
+  # container doesn't always work
+  if container inspect "$SANDBOX_NAME" >/dev/null 2>&1; then
+    mise run stop >/dev/null
+    container delete "$SANDBOX_NAME" >/dev/null
+  fi
+"""
+
+[tasks.recreate]
+description = "Delete and recreate the container (keeps volumes)"
+run = ["mise run delete-container", "mise run create"]
+
+[tasks.destroy]
+description = "Delete the container and its volumes (keeps the shared Claude login)"
+confirm = "Delete the sandbox container and its volumes?"
+run = """
+  mise run delete-container
+  for volume in $SANDBOX_VOLUMES; do
+    if container volume inspect "$SANDBOX_NAME-${volume%%:*}" >/dev/null 2>&1; then
+      container volume delete "$SANDBOX_NAME-${volume%%:*}"
+    fi
+  done
+"""
