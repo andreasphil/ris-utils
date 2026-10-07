@@ -37,11 +37,56 @@ cmp_versions() {
   fi
 }
 
+# Prints one field of the JSON remove-pin.js emits. Missing/null fields print
+# as an empty string (a bare console.log(null) would print "null").
+json_field() {
+  node -e "console.log(JSON.parse(process.argv[1])[process.argv[2]] ?? '')" "$1" "$2"
+}
+
+# Prints "artifact version" for every artifact of the given Maven group on
+# productionRuntimeClasspath, using the version Gradle actually resolved (the
+# part after "->"). Skips the BOM itself, since a BOM never shows up as a
+# resolved artifact once it's removed. Prints FAILED if any line of the group
+# failed to resolve.
+resolve_group() {
+  local group="$1"
+  local out
+  out=$(cd backend && ./gradlew dependencies --configuration productionRuntimeClasspath --write-locks 2>/dev/null || true)
+  if grep -F "$group:" <<<"$out" | grep -q FAILED; then
+    echo FAILED
+    return
+  fi
+  awk -v g="$group:" '
+    index($0, g) {
+      s = substr($0, index($0, g) + length(g))
+      sub(/ \([a-z*]\)$/, "", s)
+      artifact = s; sub(/:.*/, "", artifact)
+      if (artifact ~ /-bom$/) next
+      v = s
+      if (s ~ / -> /) sub(/.* -> /, "", v); else sub(/^[^:]*:/, "", v)
+      if (v ~ /[{\[(]/) next
+      print artifact, v
+    }' <<<"$out" | sort -k1,1 -k2,2V | awk '{ last[$1] = $2 } END { for (a in last) print a, last[a] }' | sort
+}
+
 case "$mode" in
 backend)
   alias_="${2:?alias required, e.g. bouncycastle-bom}"
   toml=backend/gradle/libs.versions.toml
   kts=backend/build.gradle.kts
+
+  # A BOM pin has no artifact of its own in the dependency tree, so check the
+  # artifacts it manages instead: record what the BOM's group resolves to
+  # with the pin, then compare after removing it.
+  is_bom=false
+  if grep -qF "platform(libs.${alias_//-/.})" "$kts"; then is_bom=true; fi
+  if [[ "$is_bom" == true ]]; then
+    bom_module=$(grep -E "^${alias_} = " "$toml" | grep -oE 'module *= *"[^"]+"' | cut -d'"' -f2)
+    group="${bom_module%%:*}"
+    echo "BOM pin — recording resolved $group artifacts with the pin"
+    baseline=$(resolve_group "$group")
+    echo "$baseline"
+  fi
 
   cp "$toml" "$toml.bak"
   cp "$kts" "$kts.bak"
@@ -49,11 +94,43 @@ backend)
   trap restore ERR
 
   removed_json=$(node "$SCRIPT_DIR/remove-pin.js" backend --alias "$alias_")
-  cve=$(node -e "console.log(JSON.parse(process.argv[1]).cve)" "$removed_json")
-  module_=$(node -e "console.log(JSON.parse(process.argv[1]).module)" "$removed_json")
-  pinned_version=$(node -e "console.log(JSON.parse(process.argv[1]).version)" "$removed_json")
+  cve=$(json_field "$removed_json" cve)
+  module_=$(json_field "$removed_json" module)
+  pinned_version=$(json_field "$removed_json" version)
   artifact="${module_#*:}"
   echo "Checking $alias_ ($module_, pinned at $pinned_version, $cve)"
+
+  if [[ "$is_bom" == true ]]; then
+    after=$(resolve_group "$group")
+    echo "Resolved without the pin:"
+    echo "$after"
+
+    downgraded=""
+    if [[ "$baseline" == FAILED || "$after" == FAILED || -z "$after" ]]; then
+      downgraded="(could not resolve $group cleanly)"
+    fi
+    while read -r name pinned_ver; do
+      [[ -z "$name" || "$name" == FAILED ]] && continue
+      new_ver=$(awk -v a="$name" '$1 == a { print $2 }' <<<"$after")
+      # An artifact that disappears entirely is no longer shipped, so it's fine.
+      [[ -z "$new_ver" ]] && continue
+      if [[ "$(cmp_versions "$new_ver" "$pinned_ver")" != "ge" ]]; then
+        downgraded+=" $name:$pinned_ver->$new_ver"
+      fi
+    done <<<"$baseline"
+
+    if [[ -z "$downgraded" ]]; then
+      echo "DROP — no $group artifact resolves lower without the BOM pin."
+      rm -f "$toml.bak" "$kts.bak"
+    else
+      echo "KEEP — without the BOM pin:$downgraded"
+      restore
+    fi
+    trap - ERR
+    (cd backend && ./gradlew :dependencies --write-locks >/dev/null 2>&1)
+    echo "Full lockfile regenerated. Check: git diff --stat backend/gradle.lockfile"
+    exit 0
+  fi
 
   echo "Running: cd backend && ./gradlew dependencies --configuration productionRuntimeClasspath --write-locks | grep -i $artifact"
   # A "{strictly ...}"/FAILED line means the lockfile hasn't refreshed yet
@@ -107,7 +184,7 @@ pnpm)
   trap restore ERR
 
   removed_json=$(node "$SCRIPT_DIR/remove-pin.js" pnpm --project "$project" --package "$pkg")
-  cve=$(node -e "console.log(JSON.parse(process.argv[1]).cve)" "$removed_json")
+  cve=$(json_field "$removed_json" cve)
   echo "Checking override for $pkg in $project (${cve:-no CVE comment on this entry})"
 
   (cd "$project" && pnpm install >/dev/null)

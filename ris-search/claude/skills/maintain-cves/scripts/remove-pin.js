@@ -81,7 +81,11 @@ function removeBackendPin(alias) {
 function removePnpmOverride(project, pkg) {
   const yamlPath = `${project}/pnpm-workspace.yaml`;
   const lines = readFileSync(yamlPath, "utf-8").split("\n");
-  const idx = lines.findIndex((l) => new RegExp(`^\\s+${pkg}:`).test(l));
+  // Scoped names are quoted in YAML ("@scope/name": ...), and may contain
+  // regex metacharacters like "." — escape and allow optional quotes.
+  const escaped = pkg.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const keyPattern = new RegExp(`^\\s+(["']?)${escaped}\\1:`);
+  const idx = lines.findIndex((l) => keyPattern.test(l));
   if (idx === -1) {
     console.error(`Package '${pkg}' not found under overrides: in ${yamlPath}`);
     exit(1);
@@ -92,6 +96,18 @@ function removePnpmOverride(project, pkg) {
   const cve = line.match(/#\s*((?:CVE|GHSA)-\S+)/)?.[1] ?? null;
 
   lines.splice(idx, 1);
+
+  // An "overrides:" key with no entries left parses as null, which makes
+  // pnpm install crash ("Cannot convert undefined or null to object").
+  // Drop the key, plus the blank line after it, once its last entry is gone.
+  const overridesIdx = lines.findIndex((l) => l === "overrides:");
+  const nextLine = lines[overridesIdx + 1] ?? "";
+  const overridesEmpty = overridesIdx !== -1 && !/^\s+\S/.test(nextLine);
+  if (overridesEmpty) {
+    const removeCount = nextLine.trim() === "" ? 2 : 1;
+    lines.splice(overridesIdx, removeCount);
+  }
+
   writeFileSync(yamlPath, lines.join("\n"));
 
   console.log(JSON.stringify({ cve, package: pkg, version }));
