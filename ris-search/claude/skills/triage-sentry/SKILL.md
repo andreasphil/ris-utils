@@ -16,16 +16,17 @@ I get all unresolved issues with the `sentry` CLI, triage each one with the team
 **Categories:**
 
 - **noise**: it shouldn't be in Sentry, or there's nothing to act on (wrong logging, temporary downtime, etc.). Recommend preventing it from being logged again when that's cheap, otherwise archive.
-- **bug**: something is broken. Recommend a Jira ticket created via the Sentry integration (component `Portal`, fix version = current EA, status "Ready for development"), or linking an existing ticket.
+- **bug**: something is broken. Recommend a Jira ticket created via the Sentry integration (component `Portal`, fix version = current EA, status "Ready for development"), or linking an existing ticket, and letting the devs know. Prefer linking an existing ticket over creating a redundant one.
 - **huh**: unclear what it means, but the app is up. Recommend checking with the other devs.
 - **emergency**: it looks like many users are affected. Recommend a bug ticket, a post in the team channel, and a team decision on next steps.
 
 **Handling rules for the recommendations:**
 
-- Default: archive *until escalating*. If it was a fluke, archive *for…*, *until this occurs again*, or *until it affects N more users*.
-- Don't resolve during triage. Resolve only after a code fix, and reference the commit.
-- **Regressed** issues were fixed before and came back. Treat them with higher priority. The activity feed shows the earlier tickets and commits.
-- Merge only near-identical issues (same error, small stack trace differences), never issues that are only related.
+- Archive *until escalating* when a ticket is created or linked. If it was a fluke and no action is needed, archive *for…* or *until this occurs again…*.
+- Don't resolve during triage. Resolve only after a code fix, and reference the commit (or leave a comment if there is no commit).
+- **Regressed** issues were fixed before and came back. Treat them with higher priority. The activity feed shows who worked on it, and the earlier tickets and commits.
+- Merge only when certain it's a duplicate Sentry didn't recognize: near-identical issues (same error, small stack trace differences), never issues that are only related.
+- If an issue looks like a duplicate or variation of a known issue that already has a ticket, recommend merging with it and/or linking that ticket.
 - If a fix takes about 15 minutes or less, say so.
 - Traceability: every action should be explainable from the Sentry issue itself (a linked ticket, a commit, or a comment).
 
@@ -38,6 +39,12 @@ sentry issue list digitalservice/ris-search --query "is:unresolved" --period 90d
 ```
 
 The output is `{ data: [...], hasMore }`. Useful fields: `id`, `shortId`, `title`, `culprit`, `count`, `userCount`, `firstSeen`, `lastSeen`, `substatus` (`new`, `ongoing`, `escalating`, `regressed`), `platform`. The issue link is `https://digitalservice.sentry.io/issues/<id>/`.
+
+Also get the known issues that already have a ticket, so you can spot duplicates and variations and recommend linking instead of new tickets:
+
+```bash
+sentry issue list digitalservice/ris-search --query "has:link" --period 90d --limit 100 --json
+```
 
 If the CLI fails with `unable to open database file`, the sandbox is blocking its local state. Run it outside the sandbox.
 
@@ -54,5 +61,7 @@ Write `sentry-triage-<YYYY-MM-DD>.html` in the repo root (leave it untracked). I
 1. **Header**: date, number of unresolved issues, a link to the unresolved list in Sentry.
 2. **Summary**: a few sentences on the overall picture. Always state whether any issues are **regressed** and whether any are an **emergency**, and give the count per category.
 3. **Bug / Huh / Noise sections** (plus **Emergency** first, if there are any). Each row has the linked issue IDs (grouped when they are a cluster, with event counts and an escalating or regressed marker), what's going on, and the recommendation. Include merge suggestions.
+
+**Processed checkboxes:** put an unchecked checkbox in front of every issue link, so the maintainer can tick off what they have handled. Give each checkbox a `data-issue="<shortId>"` attribute and add a small inline script that saves the state to `localStorage` and restores it on load. Key it per report, e.g. `sentry-triage:<YYYY-MM-DD>:<shortId>`, so a new report starts unchecked. Wrap the `localStorage` calls in `try`/`catch`, because some browsers block storage for `file://` pages. The checkboxes must still work then, only without persistence. Optionally dim the row or strike through the link when checked.
 
 Then tell the user the file path and give them `! open <file>` to view it, because the sandbox blocks `open`.
