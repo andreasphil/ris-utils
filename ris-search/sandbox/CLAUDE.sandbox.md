@@ -9,6 +9,7 @@ You are running inside a sandbox container (see `sandbox/README.md` in the repo)
 - Docker is available, so backend integration tests (Testcontainers) work. They are CPU-heavy: stop OpenSearch (`docker compose stop`) before long test runs, it slows them down a lot.
 - The backend downloads two packages from GitHub Packages. The token for them is in `~/.gradle/gradle.properties`. If Gradle fails with 401 on `maven.pkg.github.com`, the token is missing: ask the user to run `mise run backend-token` on the host.
 - Trivy is installed for vulnerability scans.
+- The Sentry CLI (`sentry`) is installed.
 - `build/` folders are shared with the host, so Gradle may skip tests the host already ran. Use `--rerun-tasks` when you need a real run.
 - `.git` is mounted read-only. You can inspect history, diffs and branches, but you can't commit, switch branches, or stash. Leave committing to the user.
 - Don't push, pull, or fetch. The sandbox has no Git credentials, so these fail.

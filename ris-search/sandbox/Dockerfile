@@ -71,6 +71,13 @@ ENV JAVA_HOME="/home/developer/.local/share/mise/installs/java/25"
 # trivy to scan dependencies for vulnerabilities, like CI does
 RUN mise use --global trivy@latest
 
+# sentry cli, installs to ~/.local/bin, which is already on PATH. its agent
+# skills would go to ~/.claude, which the shared mount hides. the opt-out
+# covers both the installer and the cli itself.
+ENV SENTRY_CLI_NO_TELEMETRY=1
+RUN curl -fsS https://cli.sentry.dev/install \
+  | bash -s -- --no-modify-path --no-completions --no-agent-skills
+
 # node and pnpm with the versions from frontend/package.json. playwright-cli
 # needs node, so it comes after.
 ARG NODE_VERSION

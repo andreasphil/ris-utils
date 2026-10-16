@@ -56,6 +56,7 @@ The [Dockerfile](./Dockerfile) installs:
 - Docker and Docker Compose, for OpenSearch and Testcontainers
 - Python 3 from the Ubuntu packages
 - Trivy via mise
+- The Sentry CLI, without its skill
 - Claude Code, and `playwright-cli` with its skill
 - The [RIS CLI](https://github.com/andreasphil/ris-cli) from the latest commit on `main`, with its skill
 
@@ -103,7 +104,7 @@ Anything you'll always need goes in the Dockerfile.
 - **Playwright:** the browsers are in the image instead of a volume, so E2E tests and `playwright-cli` work without an install step.
 - **node_modules:** two volumes, for `frontend/` and `api-docs/`. The repo root has no `node_modules`.
 - **mise:** the repo's `mise.local.toml` is ignored. `mise.sandbox.toml` copies the environment variables the sandbox needs from it and goes to `conf.d`, because the Dockerfile installs the tools with `mise use`.
-- **Extra tools:** Python 3, Trivy, and the RIS CLI from git with its skill.
+- **Extra tools:** Python 3, Trivy, the Sentry CLI, and the RIS CLI from git with its skill.
 - **Ports and resources:** frontend, backend, Storybook, OpenSearch and OpenSearch Dashboards. 8 CPUs and 12 GB of memory.
 
 ## Quirks of Apple container
