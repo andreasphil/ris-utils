@@ -12,8 +12,8 @@ importers:
         specifier: ^2.4.2
         version: 2.4.2
       yocto-spinner:
-        specifier: ^1.0.0
-        version: 1.0.0
+        specifier: ^1.2.2
+        version: 1.2.2
 
 packages:
 
@@ -28,8 +28,8 @@ packages:
   sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
 
-  yocto-spinner@1.0.0:
-    resolution: {integrity: sha512-VPX8P/+Z2Fnpx8PC/JELbxp3QRrBxjAekio6yulGtA5gKt9YyRc5ycCb+NHgZCbZ0kx9KxwZp7gC6UlrCcCdSQ==}
+  yocto-spinner@1.2.2:
+    resolution: {integrity: sha512-DODGl1wJjA/s5pnJFKau9lIYHT81lnhob1i3e1TjxZRxEhWRKl74nTbWE6H5KlkViQQTo/Z29YFdxzTZAMY3ng==}
     engines: {node: '>=18.19'}
 
   yoctocolors@2.1.2:
@@ -47,7 +47,7 @@ snapshots:
 
   sisteransi@1.0.5: {}
 
-  yocto-spinner@1.0.0:
+  yocto-spinner@1.2.2:
     dependencies:
       yoctocolors: 2.1.2
 
