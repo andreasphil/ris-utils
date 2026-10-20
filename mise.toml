@@ -1,0 +1,11 @@
+[tasks.install]
+description = "Copy a project's files from ris-utils into its clone (default ../<project>)"
+run = "node bin/project-files.mjs install"
+
+[tasks.sync]
+description = "Copy a project's files from its clone back into ris-utils"
+run = "node bin/project-files.mjs sync"
+
+[tasks.add]
+description = "Start tracking files from a project clone (paths relative to the clone)"
+run = "node bin/project-files.mjs add"
