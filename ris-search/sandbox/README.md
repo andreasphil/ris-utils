@@ -36,6 +36,18 @@ mise run backend-token   # reads the token from 1Password, writes it to the Grad
 
 The agent starts services and dev servers itself, with the same commands you'd use on the host. [CLAUDE.sandbox.md](./CLAUDE.sandbox.md) lists them. On the host, open the frontend at <http://localhost:3000> and the backend at <http://localhost:8080>. The ports only listen on 127.0.0.1. They clash with the same services running on the host, so stop those first.
 
+### Staging backend
+
+By default, the frontend in the sandbox uses the backend in the sandbox. To use staging instead, stop the sandbox's backend and run this on the host:
+
+```sh
+mise run staging   # until you press ctrl+c
+```
+
+It starts the [staging proxy](../frontend/staging-proxy) in its own container with the auth header from 1Password, and forwards port 8080 in the sandbox to it with `socat`. The frontend's backend URL stays `http://localhost:8080`, so you don't need to restart the dev server, and the host browser goes through the same port. Ctrl+c stops both. `SANDBOX_STAGING_AUTH_REF` in [mise.toml](./mise.toml) holds the 1Password reference.
+
+The auth header stays out of the sandbox, but while the task runs, anything in the sandbox can send authenticated requests to staging.
+
 ## What changes need what
 
 | You changed…                                                            | Run                  |
@@ -69,8 +81,7 @@ The sandbox ignores the repo's `mise.local.toml` because it's host-specific. The
 | Path                                  | Access              | Notes                                                                                      |
 | ------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------ |
 | The repo                              | read/write          | mounted at the same path as on the host                                                    |
-| `.git`                                | read-only           | commit on the host                                                                         |
-| `ris-utils/ris-search`                | read-only           | targets of the repo's symlinks like `.claude` and `CLAUDE.md`, set in `SANDBOX_LINKED_DIR` |
+| `.git`, `.claude`, `sandbox`          | read-only           | commit on the host, the agent can't edit its settings or sandbox, see `SANDBOX_READONLY`   |
 | `frontend/node_modules`, `api-docs/…` | separate volumes    | Linux binaries, the host's `node_modules` stay as they are                                 |
 | `~/.claude`                           | host folder         | Claude login and memory, shared by all sandboxes, set in `SANDBOX_CLAUDE_DIR`              |
 | `~/.gradle`                           | volume              | Gradle cache and the GitHub Packages token                                                 |
@@ -97,7 +108,7 @@ Anything you'll always need goes in the Dockerfile.
 
 ## Project-specific changes
 
-- **Location:** the sandbox lives in `ris-utils/ris-search/sandbox` and is symlinked into the repo, like the other personal files. `SANDBOX_REPO` is set explicitly, and `create` mounts the linked folder read-only, so the symlinks resolve and the agent can't edit its own sandbox.
+- **Location:** the sandbox lives in `sandbox/` in the repo. `create` mounts it read-only, together with `.claude/`, so the agent can't edit its own sandbox or settings.
 - **Versions:** Node, pnpm and Playwright come from `frontend/package.json` through build arguments, instead of from `mise.sandbox.toml`.
 - **Java and Gradle:** Java 25 from the build's toolchain, a Gradle cache volume, and the `backend-token` task that stores the GitHub Packages token in it.
 - **Docker:** dockerd runs inside the sandbox for OpenSearch and Testcontainers. This needs `--cap-add ALL`, an entrypoint that prepares the VM and runs dockerd instead of idling, and more time for `stop`.
@@ -105,6 +116,7 @@ Anything you'll always need goes in the Dockerfile.
 - **node_modules:** two volumes, for `frontend/` and `api-docs/`. The repo root has no `node_modules`.
 - **mise:** the repo's `mise.local.toml` is ignored. `mise.sandbox.toml` copies the environment variables the sandbox needs from it and goes to `conf.d`, because the Dockerfile installs the tools with `mise use`.
 - **Extra tools:** Python 3, Trivy, the Sentry CLI, and the RIS CLI from git with its skill.
+- **Staging:** the `staging` task and `socat` point the backend port at staging, see [Staging backend](#staging-backend).
 - **Ports and resources:** frontend, backend, Storybook, OpenSearch and OpenSearch Dashboards. 8 CPUs and 12 GB of memory.
 
 ## Quirks of Apple container

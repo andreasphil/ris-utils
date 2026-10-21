@@ -6,11 +6,12 @@ SANDBOX_NAME = "ris-sandbox"
 SANDBOX_CPUS = "8"
 SANDBOX_MEMORY = "12g"
 # absolute path, so the tasks work no matter which folder you run them from
-SANDBOX_REPO = "{{env.HOME}}/Projects/ris-search"
-# the folder this sandbox lives in. the repo symlinks .claude, CLAUDE.md and a
-# few other files into it. create mounts it read-only at the same path, so the
-# links resolve.
-SANDBOX_LINKED_DIR = "{{config_root | dirname}}"
+SANDBOX_REPO = "{{config_root | dirname}}"
+# folders in the repo that create mounts read-only, space-separated and
+# relative to the repo. .git so commits happen on the host, .claude and
+# sandbox so the agent can't change its own settings, hooks or sandbox.
+# folders that don't exist are skipped.
+SANDBOX_READONLY = ".git .claude sandbox"
 
 # ports published to 127.0.0.1 on the host, space-separated: frontend,
 # backend, storybook, opensearch, opensearch dashboards
@@ -27,6 +28,9 @@ SANDBOX_CLAUDE_DIR = "{{env.HOME}}/.local/share/sandbox-claude"
 # GitHub Packages token for `backend-token`. It only grants access to public
 # packages; the username doesn't matter as the token identifies the user.
 SANDBOX_GH_PACKAGES_TOKEN_REF = "op://Employee/Public Modules Token/password"
+# basic auth header for staging, used by `staging`. same reference as
+# frontend/staging-proxy/run.sh
+SANDBOX_STAGING_AUTH_REF = "op://gqcg6tcubz42fqwr3cx23k3a24/portal-staging-basic-auth-header-value/basic-auth-header-value"
 
 [tasks.build]
 description = "Build the sandbox image"
@@ -53,10 +57,14 @@ run = """
   for volume in $SANDBOX_VOLUMES; do
     args+=(--volume "$SANDBOX_NAME-${volume%%:*}:${volume#*:}")
   done
+  for dir in $SANDBOX_READONLY; do
+    if [[ -d $SANDBOX_REPO/$dir ]]; then
+      args+=(--mount "type=bind,source=$SANDBOX_REPO/$dir,target=$SANDBOX_REPO/$dir,readonly")
+    fi
+  done
 
-  # mount the repo at the same path as on the host. absolute paths, like the
-  # symlinks into the linked dir, then resolve inside the sandbox too. .git
-  # is read-only, so commit on the host. docker needs all capabilities.
+  # mount the repo at the same path as on the host, so absolute paths
+  # resolve inside the sandbox too. docker needs all capabilities.
   # untrusted mise config in the repo would break every mise tool, so trust
   # it, except for the host-specific mise.local.toml.
   container run --detach --init \
@@ -68,8 +76,6 @@ run = """
     --env "MISE_TRUSTED_CONFIG_PATHS=$SANDBOX_REPO" \
     --env "MISE_IGNORED_CONFIG_PATHS=$SANDBOX_REPO/mise.local.toml" \
     --mount "type=bind,source=$SANDBOX_REPO,target=$SANDBOX_REPO" \
-    --mount "type=bind,source=$SANDBOX_REPO/.git,target=$SANDBOX_REPO/.git,readonly" \
-    --mount "type=bind,source=$SANDBOX_LINKED_DIR,target=$SANDBOX_LINKED_DIR,readonly" \
     --mount "type=bind,source=$SANDBOX_CLAUDE_DIR,target=/home/developer/.claude" \
     "${args[@]}" \
     "$SANDBOX_NAME"
@@ -107,6 +113,38 @@ run = """
 global_gh_packages_user=sandbox
 global_gh_packages_token=$token
 EOF
+"""
+
+[tasks.staging]
+description = "Point the sandbox's backend port at staging until you press ctrl+c"
+run = """
+  proxy="$SANDBOX_NAME-staging-proxy"
+
+  # the backend port must be free. a running backend would serve local data.
+  if container exec "$SANDBOX_NAME" ss -Htln 'sport = :8080' | grep -q .; then
+    echo "Port 8080 is in use in the sandbox. Stop the backend first." >&2
+    exit 1
+  fi
+
+  # the staging proxy runs in its own container, so the auth header never
+  # enters the sandbox. it gets the header from the environment, so the value
+  # doesn't show up in the process list. no published port, the sandbox
+  # reaches it over the container network.
+  token=$(op read "$SANDBOX_STAGING_AUTH_REF")
+  BACKEND_AUTH_TOKEN="$token" container run --detach --rm \
+    --name "$proxy" \
+    --env BACKEND_AUTH_TOKEN \
+    --mount "type=bind,source=$SANDBOX_REPO/frontend/staging-proxy/templates,target=/etc/nginx/templates,readonly" \
+    docker.io/library/nginx:latest >/dev/null
+  trap 'container stop "$proxy" >/dev/null 2>&1 || true' EXIT
+  ip=$(container inspect "$proxy" | jq -r '.[0].status.networks[0].ipv4Address | split("/")[0]')
+
+  # forward the sandbox's backend port to the proxy. the frontend's backend
+  # URL stays http://localhost:8080, both in the sandbox and on the host. the
+  # tty passes ctrl+c on to socat.
+  echo "Port 8080 in the sandbox now points at staging. Press ctrl+c to stop."
+  container exec --interactive --tty --user developer "$SANDBOX_NAME" \
+    socat TCP-LISTEN:8080,fork,reuseaddr "TCP:$ip:8080"
 """
 
 [tasks.start]

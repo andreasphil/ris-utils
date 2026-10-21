@@ -15,6 +15,7 @@ ENV LANG=C.UTF-8
 # - jq for the license scripts
 # - libatomic1 is required by node
 # - python3 for scripts
+# - socat to forward the backend port to the staging proxy, see `mise run staging`
 # - vim, less, procps, iproute2 for looking around
 RUN apt-get update \
   && apt-get -y --no-install-recommends install \
@@ -31,6 +32,7 @@ RUN apt-get update \
   libatomic1 \
   procps \
   python3 \
+  socat \
   vim \
   && rm -rf /var/lib/apt/lists/*
 
