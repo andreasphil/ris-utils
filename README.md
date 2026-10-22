@@ -1,10 +1,6 @@
-<h1 align="center">
-  RIS Utils 🦉
-</h1>
+# RIS Utils 🦉
 
-<p align="center">
-  <strong>Scripts and utilities related to <a href="https://github.com/topics/neuris">NeuRIS</a></strong>
-</p>
+**Scripts and utilities related to [NeuRIS](https://github.com/topics/neuris)**
 
 ## Installation
 
