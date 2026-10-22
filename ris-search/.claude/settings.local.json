@@ -1,7 +1,4 @@
 {
-  "enabledPlugins": {
-    "figma@claude-plugins-official": true
-  },
   "worktree": {
     "bgIsolation": "none"
   }
