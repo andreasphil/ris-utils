@@ -1,6 +1,7 @@
 {
   "language_servers": [
     "!eslint",
+    "!typescript-ls",
     "!typescript-language-server",
     "tailwindcss-language-server",
     "..."
@@ -9,13 +10,19 @@
     "Java": {
       "format_on_save": "off"
     },
+    "TypeScript": {
+      "language_servers": ["!eslint", "!typescript-ls", "!typescript-language-server", "vtsls", "..."]
+    },
+    "JavaScript": {
+      "language_servers": ["!eslint", "!typescript-ls", "!typescript-language-server", "vtsls", "..."]
+    },
     "Vue.js": {
       "formatter": {
         "language_server": {
           "name": "oxfmt"
         }
       },
-      "language_servers": ["!eslint", "vtsls", "..."]
+      "language_servers": ["!eslint", "!typescript-ls", "vtsls", "..."]
     }
   },
   "lsp": {
