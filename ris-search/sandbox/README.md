@@ -85,6 +85,7 @@ The sandbox ignores the repo's `mise.local.toml` because it's host-specific. The
 | `frontend/node_modules`, `api-docs/…` | separate volumes    | Linux binaries, the host's `node_modules` stay as they are                                 |
 | `~/.claude`                           | host folder         | Claude login and memory, shared by all sandboxes, set in `SANDBOX_CLAUDE_DIR`              |
 | `~/.gradle`                           | volume              | Gradle cache and the GitHub Packages token                                                 |
+| `~/.config/sentry`                    | volume              | Sentry CLI login                                                                           |
 | Rest of the host                      | none                | `create` copies in your global gitignore, nothing else                                     |
 | Network                               | unrestricted egress |                                                                                            |
 
@@ -100,7 +101,7 @@ Some things to keep in mind:
 | What                                                                                  | `stop`/`start` | `recreate` | `destroy` |
 | ------------------------------------------------------------------------------------- | -------------- | ---------- | --------- |
 | Container filesystem: installed packages, shell history, Docker images and containers | kept           | lost       | lost      |
-| Volumes: Gradle cache and token, `node_modules`                                       | kept           | kept       | lost      |
+| Volumes: Gradle cache and token, Sentry login, `node_modules`                         | kept           | kept       | lost      |
 | Shared Claude folder: login and memory                                                | kept           | kept       | kept      |
 | Repo                                                                                  | kept           | kept       | kept      |
 

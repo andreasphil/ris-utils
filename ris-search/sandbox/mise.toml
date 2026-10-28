@@ -18,8 +18,9 @@ SANDBOX_READONLY = ".git .claude sandbox"
 SANDBOX_PORTS = "3000 8080 6006 9200 5601"
 
 # volumes owned by this sandbox as name:path pairs, space-separated. the name
-# gets the sandbox name as a prefix. paths can't contain spaces.
-SANDBOX_VOLUMES = "gradle:/home/developer/.gradle frontend-node-modules:{{env.SANDBOX_REPO}}/frontend/node_modules api-docs-node-modules:{{env.SANDBOX_REPO}}/api-docs/node_modules"
+# gets the sandbox name as a prefix. paths can't contain spaces. sentry keeps
+# the Sentry CLI login, which it stores in ~/.config/sentry/cli.db.
+SANDBOX_VOLUMES = "gradle:/home/developer/.gradle sentry:/home/developer/.config/sentry frontend-node-modules:{{env.SANDBOX_REPO}}/frontend/node_modules api-docs-node-modules:{{env.SANDBOX_REPO}}/api-docs/node_modules"
 
 # claude config and login, shared by all sandboxes. a folder on the host,
 # because a volume can only be attached to one running container at a time.
